@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Part</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+</head>
+<style>
+    body {
+        background-color: #f4f7fa;
+        margin-top: 20px;
+    }
+
+    .navbar-custom {
+        background-color: #e3f2fd;
+        border: 1px solid #dee2e6;
+        /* Bootstrap border color */
+    }
+
+    .card-custom {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        border: 1px solid #dee2e6;
+        /* Bootstrap border color */
+    }
+
+    .time-left {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+
+    .required-barcode {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #495057;
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        display: block;
+        margin: 10px auto;  
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+
+    .scan-item-input {
+        font-size: 1.2rem;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #dee2e6;
+    }
+
+    .status-message {
+        font-size: 1.2rem;
+        padding: 70px;
+        margin: 20px;
+        text-align: center;
+        color: black;
+        border-radius: 5px;
+        display: block;
+        background-color: #f8f9fa;
+        width: 100%;
+        margin-left: auto;
+
+        margin-right: auto;
+    }
+
+   
+    .dropdown-center {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+
+    .form-select {
+        width: auto;
+        border: 1px solid #dee2e6;
+    }
+</style>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Scan Part System</a>
+            <div class="dropdown-center">
+                <label for="selectProductDropdown" class="form-label me-2">Select Product:</label>
+                <select class="form-select" id="selectProductDropdown" required>
+                    <option value="">Select a product</option>
+
+                </select>
+            </div>
+            <button class="btn btn-secondary" onclick="resetScan()">Reset Scan</button>
+            <div class="form-group">
+                <label for="serialPortDropdown">Communication setting for serial port</label>
+                <select class="form-control" id="serialPortDropdown">
+
+                </select>
+            </div>
+            <div class="d-flex justify-content-end">
+                <span class="time-left">Time Left: <span id="timeLeft">00:30</span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card card-custom">
+                    <div class="card-header">
+                        Required Items
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Barcode</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requiredItemsTable">
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 card">
+                <form id="scanForm"></form>
+                <label for="requiredBarcode" class="form-label">Required Barcode:</label>
+                <div class="required-barcode" id="requiredBarcode">
+                </div>
+                <div id="nextCycleMessage" style="display: none;">Ready For Next Cycle</div>
+                <label for="scanItemInput" class="form-label">Scan Item:</label>
+
+                <input type="text" id="scanItemInput" class="form-control scan-item-input"
+                    placeholder="Scan Item Barcode" disabled>
+                <div id="statusMessage" class="status-message">Waiting for scan...</div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/@popperjs/core/dist/umd/popper.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    
+
+    <script>
+        let currentBarcodeIndex = 0;
+        let barcodes = []; 
+        let items = []; 
+        let selectedProductId = null;
+        let scanTimeout;
+        let countdownTimer;
+
+        // Initializes the page when the DOM content is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeSerialPorts();
+            await initializeProductDropdown();
+        });
+
+        // Initializes the serial ports dropdown
+        async function initializeSerialPorts() {
+            try {
+                const response = await window.electron.invoke('list-serial-ports');
+                if (response.success) {
+                    const ports = response.ports;
+                    const serialPortDropdown = document.getElementById('serialPortDropdown');
+                    serialPortDropdown.innerHTML = ''; 
+                    ports.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port.path;
+                        option.text = `${port.path} - ${port.manufacturer || 'Unknown manufacturer'}`;
+                        serialPortDropdown.appendChild(option);
+                    });
+                } else {
+                    console.error('Failed to list serial ports:', response.message);
+                }
+            } catch (error) {
+                console.error('Failed to list serial ports:', error);
+            }
+        }
+
+        // Initializes the product dropdown
+        async function initializeProductDropdown() {
+            try {
+                const products = await window.electron.invoke('fetch-products');
+                const selectProductDropdown = document.getElementById('selectProductDropdown');
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = product.productName;
+                    selectProductDropdown.appendChild(option);
+                });
+                
+                selectProductDropdown.addEventListener('change', handleProductSelection);
+            } catch (error) {
+                console.error('Failed to fetch products:', error);
+            }
+        }
+
+        // Handles the product selection change event
+        async function handleProductSelection(event) {
+            const productName = event.target.options[event.target.selectedIndex].text;
+            selectedProductId = event.target.value;
+            if (productName !== "Select a product") {
+                await fetchAndDisplayItems(productName);
+                startCountdown(); 
+                document.getElementById('scanItemInput').disabled = false; 
+                document.getElementById('nextCycleMessage').style.display = 'none'; 
+                updateStatusMessage("Scanning Started", "none");
+            } else {
+                document.getElementById('scanItemInput').disabled = true; 
+                resetScan(); 
+            }
+        }
+
+        // Fetches and displays items for the selected product
+        async function fetchAndDisplayItems(productName) {
+            try {
+                const items = await window.electron.invoke('fetch-items', { productName: productName });
+                barcodes = items.map(item => item.barcode);
+                currentBarcodeIndex = 0;
+                displayCurrentBarcode();
+                populateItemsTable(items);
+                highlightCurrentItemInTable();
+            } catch (error) {
+                console.error('Failed to fetch items:', error);
+                // Implement showErrorModal or similar to handle errors
+            }
+        }
+
+        // Displays the current barcode
+        function displayCurrentBarcode() {
+            if (barcodes.length > 0 && currentBarcodeIndex < barcodes.length) {
+                document.getElementById('requiredBarcode').textContent = barcodes[currentBarcodeIndex];
+            }
+        }
+
+        // Populates the items table
+        function populateItemsTable(items) {
+            const tableBody = document.getElementById('requiredItemsTable');
+            tableBody.innerHTML = ''; // Clear existing items
+
+            items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                const itemCell = document.createElement('td');
+                itemCell.textContent = item.itemName;
+                const barcodeCell = document.createElement('td');
+                barcodeCell.textContent = item.barcode;
+
+                row.appendChild(itemCell);
+                row.appendChild(barcodeCell);
+                tableBody.appendChild(row);
+            });
+            highlightCurrentItemInTable(); 
+        }
+
+        // Highlights the current item in the table
+        function highlightCurrentItemInTable() {
+            const tableRows = document.getElementById('requiredItemsTable').rows;
+            for (let i = 0; i < tableRows.length; i++) {
+                const itemCell = tableRows[i].cells[0]; 
+                itemCell.style.backgroundColor = ''; 
+                itemCell.style.color = ''; 
+            }
+            if (tableRows.length > 0 && currentBarcodeIndex < tableRows.length) {
+                const itemCell = tableRows[currentBarcodeIndex].cells[0]; 
+                itemCell.style.backgroundColor = 'blue'; 
+                itemCell.style.color = 'white'; 
+            }
+        }
+
+        
+ 
+    // Handles the scan input event
+    document.getElementById('scanItemInput').addEventListener('input', function () {
+        clearTimeout(scanTimeout);  
+
+        // Restart the timer on input only if it's the first barcode
+        if (currentBarcodeIndex === 0) {
+            startCountdown();
+        }
+
+        scanTimeout = setTimeout(() => {
+            const scannedValue = this.value; 
+            if (scannedValue.toLowerCase().includes(barcodes[currentBarcodeIndex].toLowerCase())) {
+                handleValidScan();
+            } else {
+                handleInvalidScan();
+            }
+        }, 500); 
+    });
+
+        // Handles a valid scan
+        function handleValidScan() {
+            updateStatusMessage("Valid scan", "valid");
+            currentBarcodeIndex++;
+            if (currentBarcodeIndex < barcodes.length) {
+                document.getElementById('scanItemInput').value = ''; 
+                displayCurrentBarcode();
+                highlightCurrentItemInTable(); 
+            } else {
+                handleSequenceCompletion();
+            }
+        }
+
+      // Handles sequence completion
+      function handleSequenceCompletion() {
+        document.getElementById('scanItemInput').value = '';
+        updateStatusMessage("Sequence Successful", "success");
+
+        window.electron.invoke('sequence-completed', {
+            selectedProductId: selectedProductId,
+            scan_status: 'completed'
+        }).then(response => {
+            console.log('Sequence completed response:', response);
+        }).catch(error => {
+            console.error('Error in sequence completion:', error);
+        });
+        console.log('Sequence completed', selectedProductId, 'completed');
+
+        // Stop the timer and do not reset other elements
+        clearInterval(countdownTimer);
+        document.getElementById('nextCycleMessage').style.display = 'block';
+
+        currentBarcodeIndex = 0;
+        displayCurrentBarcode();
+        highlightCurrentItemInTable();
+    }
+
+        // Handles an invalid scan
+        function handleInvalidScan() {
+            document.getElementById('scanItemInput').value = '';
+            updateStatusMessage("Wrong barcode", "error");
+            resetScan(true, 2000);
+        }
+
+        // Updates the status message
+        function updateStatusMessage(message, messageType) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+           
+            switch (messageType) {
+                case "waiting":
+                    statusMessage.style.backgroundColor = "#f8f9fa";
+                    statusMessage.style.color = "black";
+                    break;
+                case "valid":
+                    statusMessage.style.backgroundColor = "white";
+                    statusMessage.style.color = "#28a74580";
+                    sendLightCommand('@0123000001$$', 1000); 
+                    break;
+                case "success":
+                    statusMessage.style.backgroundColor = "#28a745";
+                    statusMessage.style.color = "white";
+                    sendLightCommand('@0123000001$$', 1000); 
+                    break;
+                case "error":
+                    statusMessage.style.backgroundColor = "#dc3545";
+                    statusMessage.style.color = "white";
+                    sendLightCommand('@0123000100$$', 0); // Keep the red light on
+                    break;
+                default:
+                    statusMessage.style.backgroundColor = "white";
+                    statusMessage.style.color = "black";
+            }
+        }
+
+        // Sends a command to the serial port
+        async function sendLightCommand(command, duration) {
+            const selectedPort = document.getElementById('serialPortDropdown').value;
+            await window.electron.invoke('send-command-to-serial-port', { command, portPath: selectedPort });
+            setTimeout(() => {
+                window.electron.invoke('send-command-to-serial-port', { command: '@0123000000$$', portPath: selectedPort });
+            }, duration);
+        }
+
+        // Resets the scan process
+        function resetScan(softReset = false, delay = 0) {
+            document.getElementById('nextCycleMessage').style.display = 'none';
+            setTimeout(() => {
+                document.getElementById('requiredItemsTable').innerHTML = ''; 
+                document.getElementById('requiredBarcode').textContent = ''; 
+                if(softReset){
+                    updateStatusMessage("Wrong barcode", "error"); 
+                }
+                else{
+                    updateStatusMessage("Waiting for scan...", "waiting"); 
+                }
+               
+                currentBarcodeIndex = 0; 
+                if (!softReset) {
+                    barcodes = []; 
+                    document.getElementById('selectProductDropdown').selectedIndex = 0; 
+                    document.getElementById('scanItemInput').disabled = true; 
+                } else {
+                    document.getElementById('scanItemInput').disabled = false; 
+                    const productName = document.getElementById('selectProductDropdown').options[document.getElementById('selectProductDropdown').selectedIndex].text;
+                    fetchAndDisplayItems(productName); 
+                }
+                clearInterval(countdownTimer); 
+                document.getElementById('timeLeft').textContent = "00:30";
+                if(barcodes.length > 0){
+                    startCountdown();  
+                }
+            }, delay);
+        }
+
+        // Starts the countdown timer
+        function startCountdown(duration = 30) {
+            clearInterval(countdownTimer); 
+            let timer = duration, minutes, seconds;
+            countdownTimer = setInterval(function () {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                document.getElementById('timeLeft').textContent = minutes + ":" + seconds;
+
+                if (--timer < 0) {
+                    timer = duration;
+                    clearInterval(countdownTimer); 
+                    // resetScan(); 
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>

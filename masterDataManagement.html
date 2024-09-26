@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Data Management</title>
+    <!-- <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet"> -->
+    <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0 7px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        .card-title {
+            color: #333;
+            font-size: 1rem;
+        }
+        .btn-primary {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .modal-content {
+            border-radius: 5px;
+        }
+        .table th, .table td {
+            text-align: center;
+            padding: 8px;
+        }
+        .table thead th {
+            background-color: #343a40;
+            color: #fff;
+        }
+        .table-responsive {
+            margin: 15px 0;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .form-control, .form-select {
+            font-size: 0.875rem;
+            padding: 8px;
+        }
+        .btn {
+            font-size: 0.875rem;
+            padding: 8px 15px;
+        }
+        .parameter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .parameter-group .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="master-data-tab" data-toggle="tab" href="#masterData" role="tab" aria-controls="masterData" aria-selected="true">Master Data Management</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="manage-parameters-tab" data-toggle="tab" href="#manageParameters" role="tab" aria-controls="manageParameters" aria-selected="false">Manage Parameters</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="masterData" role="tabpanel" aria-labelledby="master-data-tab">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Front Parts</h5>
+                        <form id="frontPartsForm">
+                            <div class="form-group">
+                                <label for="variantSelect">Select Variant</label>
+                                <select class="form-control" id="variantSelect" onchange="showFields()">
+                                    <option value="">Select...</option>
+                                    <option value="rear">Rear</option>
+                                    <option value="front">Front</option>
+                                </select>
+                            </div>
+                            <div id="rearFields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="rearPart">Rear Part</label>
+                                    <input type="text" class="form-control" id="rearPart" placeholder="Enter rear part">
+                                </div>
+                            </div>
+                            <div id="frontFields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="frontPart">Front Part</label>
+                                    <input type="text" class="form-control" id="frontPart" placeholder="Enter front part">
+                                </div>
+                                <div class="form-group">
+                                    <label for="spring">Spring</label>
+                                    <input type="text" class="form-control" id="spring" placeholder="Enter spring">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="binQuantity">Bin Quantity</label>
+                                <input type="number" class="form-control" id="binQuantity" placeholder="Enter bin quantity">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="table-responsive card mt-2">
+                    <table class="table" id="frontPartsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Variant</th>
+                                <th>Part</th>
+                                <th>Spring</th>
+                                <th>Bin Quantity</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- front parts will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="manageParameters" role="tabpanel" aria-labelledby="manage-parameters-tab">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Parameters</h5>
+                        <form id="parametersForm">
+                            <div class="form-group">
+                                <label for="partSelect">Select Part</label>
+                                <select class="form-control" id="partSelect">
+                                    <option value="">Select...</option>
+                                    <!-- Populate this dropdown with parts -->
+                                </select>
+                            </div>
+                            <div id="parametersContainer">
+                                <div class="parameter-group">
+                                    <div class="form-group">
+                                        <label for="controlItem">Control Item</label>
+                                        <input type="text" class="form-control" name="controlItem" placeholder="Enter control item">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="content">Content</label>
+                                        <input type="text" class="form-control" name="content" placeholder="Enter content">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="checkingMethod">Checking Method</label>
+                                        <input type="text" class="form-control" name="checkingMethod" placeholder="Enter checking method">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="status">Status</label>
+                                        <select class="form-control" name="status">
+                                            <option value="OK">OK</option>
+                                            <option value="NOT OK">NOT OK</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addMoreParameters()">Add More</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="successModalLabel">Success</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span> <!-- This is for Bootstrap 4 -->
+                </button>
+            </div>
+            <div class="modal-body">
+                Operation completed successfully.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span> <!-- This is for Bootstrap 4 -->
+                </button>
+            </div>
+            <div class="modal-body">
+                An error occurred. Please try again.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+  
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/@popperjs/core/dist/umd/popper.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  
+  
+  <script>
+        let isEditing = false;
+        let currentEditId = null;
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+     
+       
+            fetchPart();
+            fetchVarient();
+            document.getElementById('frontPartsForm').addEventListener('submit', handleFormSubmit);
+            document.getElementById('parametersForm').addEventListener('submit', handleParametersFormSubmit);
+            document.getElementById('manage-parameters-tab').addEventListener('click', handleTabClick);
+            document.getElementById('master-data-tab').addEventListener('click', handleTabClick);
+
+        });
+
+        function fetchPart() {
+            window.electron.send('fetch-part', { vcode: 'partDropdown', id: '', col: '' });
+            window.electron.receive('part-fetched', (response) => {
+                console.log('Response received:', response);
+                if (response.success) {
+                    populatePart(response.part);
+                } else {
+                    console.error('Error fetching part:', response.error);
+                }
+            });
+        }
+        function handleTabClick(event) {
+
+        event.preventDefault();
+        const target = event.target;
+        const tabId = target.getAttribute('href').substring(1);
+
+        document.querySelectorAll('.tab-pane').forEach(tabPane => {
+            tabPane.classList.remove('show', 'active');
+        });
+        document.getElementById(tabId).classList.add('show', 'active');
+        document.querySelectorAll('.nav-link').forEach(navLink => {
+            navLink.classList.remove('active');
+        });
+            target.classList.add('active');
+        }
+
+        function populatePart(parts) {
+            const select = document.getElementById('partSelect');
+            select.innerHTML = ''; // Clear existing options
+            parts.forEach(part => {
+                const option = document.createElement('option');
+                option.value = part.id;
+                option.text = part.part;
+                select.appendChild(option);
+            });
+        }
+
+        function fetchVarient() {
+            window.electron.send('fetch-varient', { vcode: 'fetchVarient', id: '', col: '' });
+            window.electron.receive('varient-fetched', (response) => {
+                console.log('Response received varient:', response);
+                if (response.success) {
+                    populateVarientTable(response.varient);
+                } else {
+                    console.error('Error fetching varient:', response.error);
+                }
+            });
+        }
+
+        function populateVarientTable(varients) {
+            const tableBody = document.getElementById('frontPartsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing rows
+            varients.forEach((varient, index) => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${varient.varient_name}</td>
+                    <td>${varient.part}</td>
+                    <td>${varient.spring}</td>
+                    <td>${varient.bin_quantity}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="editVarient(${varient.id}, '${varient.varient_name}', '${varient.part}', '${varient.spring}', '${varient.bin_quantity}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteVarient(${varient.id})">Delete</button>
+                    </td>
+                `
+            });
+        }
+
+        function showFields() {
+            var variant = document.getElementById('variantSelect').value;
+            document.getElementById('rearFields').style.display = variant === 'rear' ? 'block' : 'none';
+            document.getElementById('frontFields').style.display = variant === 'front' ? 'block' : 'none';
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const variant = document.getElementById('variantSelect').value;
+            const rearPart = document.getElementById('rearPart').value;
+            const frontPart = document.getElementById('frontPart').value;
+            const spring = document.getElementById('spring').value;
+            const binQuantity = document.getElementById('binQuantity').value;
+            const action = isEditing ? 'update' : 'insert';
+            const id = isEditing ? currentEditId : null;
+
+            console.log('Form Data:', { variant, rearPart, frontPart, spring, binQuantity, action, id });
+
+            if (variant === 'rear' && rearPart) {
+                const response = await window.electron.invoke('manage-varient', {
+                    action,
+                    id: id, // Ensure id is a valid string or null
+                    varient_name: variant,
+                    part: rearPart,
+                    spring: '', // Ensure spring is an empty string for rear variant
+                    bin_quantity: binQuantity,
+                    created_on: '', // This will be set in the backend
+                    created_by: ''  // This will be set in the backend
+                });
+                console.log('Response:', response);
+                if (response && response.success) {
+                    fetchVarient();
+                    showSuccessModal(isEditing ? 'Rear part updated successfully.' : 'Rear part added successfully.');
+                    resetForm();
+                } else {
+                    showErrorModal(isEditing ? 'Failed to update rear part.' : 'Failed to add rear part.');
+                }
+            } else if (variant === 'front' && frontPart && spring) {
+                const response = await window.electron.invoke('manage-varient', {
+                    action,
+                    id: id, // Ensure id is a valid string or null
+                    varient_name: variant,
+                    part: frontPart,
+                    spring,
+                    bin_quantity: binQuantity,
+                    created_on: '', // This will be set in the backend
+                    created_by: ''  // This will be set in the backend
+                });
+                console.log('Response:', response);
+                if (response && response.success) {
+                    fetchVarient();
+                    showSuccessModal(isEditing ? 'Front part updated successfully.' : 'Front part added successfully.');
+                    resetForm();
+                } else {
+                    showErrorModal(isEditing ? 'Failed to update front part.' : 'Failed to add front part.');
+                }
+            } else {
+                showErrorModal('Please fill in all required fields.');
+            }
+        }
+
+        function editVarient(id, varient_name, part, spring, bin_quantity) {
+            isEditing = true;
+            currentEditId = id;
+            document.getElementById('variantSelect').value = varient_name;
+            showFields();
+            if (varient_name === 'rear') {
+                document.getElementById('rearPart').value = part;
+            } else if (varient_name === 'front') {
+                document.getElementById('frontPart').value = part;
+                document.getElementById('spring').value = spring;
+            }
+            document.getElementById('binQuantity').value = bin_quantity;
+        }
+
+        async function deleteVarient(id) {
+            const action = 'delete';
+            console.log('Deleting variant with ID:', id);
+            const response = await window.electron.invoke('manage-varient', {
+                action,
+                id: id, // Ensure id is a valid string or null
+                varient_name: '',
+                part: '',
+                spring: '',
+                bin_quantity: '',
+                created_on: '', // This will be set in the backend
+                created_by: ''  // This will be set in the backend
+            });
+            console.log('Response:', response);
+            if (response && response.success) {
+                fetchVarient();
+                showSuccessModal('Variant deleted successfully.');
+            } else {
+                showErrorModal('Failed to delete variant.');
+            }
+        }
+
+        function resetForm() {
+            isEditing = false;
+            currentEditId = null;
+            document.getElementById('variantSelect').value = '';
+            document.getElementById('rearPart').value = '';
+            document.getElementById('frontPart').value = '';
+            document.getElementById('spring').value = '';
+            document.getElementById('binQuantity').value = '';
+            showFields();
+        }
+
+        // function showFields() {
+        //     const variant = document.getElementById('variantSelect').value;
+        //     document.getElementById('rearPartGroup').style.display = variant === 'rear' ? 'block' : 'none';
+        //     document.getElementById('frontPartGroup').style.display = variant === 'front' ? 'block' : 'none';
+        //     document.getElementById('springGroup').style.display = variant === 'front' ? 'block' : 'none';
+        // }
+        function addMoreParameters() {
+            const parametersContainer = document.getElementById('parametersContainer');
+            const parameterGroupCount = parametersContainer.getElementsByClassName('parameter-group').length + 1;
+            const parameterGroup = document.createElement('div');
+            parameterGroup.className = 'parameter-group';
+            parameterGroup.innerHTML = `
+                <div class="form-group">
+                    <label for="controlItem${parameterGroupCount}">Control Item ${parameterGroupCount}</label>
+                    <input type="text" class="form-control" name="controlItem" placeholder="Enter control item">
+                </div>
+                <div class="form-group">
+                    <label for="content${parameterGroupCount}">Content ${parameterGroupCount}</label>
+                    <input type="text" class="form-control" name="content" placeholder="Enter content">
+                </div>
+                <div class="form-group">
+                    <label for="checkingMethod${parameterGroupCount}">Checking Method ${parameterGroupCount}</label>
+                    <input type="text" class="form-control" name="checkingMethod" placeholder="Enter checking method">
+                </div>
+                <div class="form-group">
+                    <label for="status${parameterGroupCount}">Status ${parameterGroupCount}</label>
+                    <select class="form-control" name="status">
+                        <option value="OK">OK</option>
+                        <option value="NOT OK">NOT OK</option>
+                    </select>
+                </div>
+            `;
+            parametersContainer.appendChild(parameterGroup);
+        }
+
+        function handleParametersFormSubmit(event) {
+            event.preventDefault();
+            const part = document.getElementById('partSelect').value;
+            const parameterGroups = document.querySelectorAll('.parameter-group');
+            const parameters = [];
+
+            parameterGroups.forEach((group) => {
+                const controlItem = group.querySelector('input[name="controlItem"]').value;
+                const content = group.querySelector('input[name="content"]').value;
+                const checkingMethod = group.querySelector('input[name="checkingMethod"]').value;
+                const status = group.querySelector('select[name="status"]').value;
+
+                if (controlItem && content && checkingMethod && status) {
+                    parameters.push({ controlItem, content, checkingMethod, status });
+                }
+            });
+
+            if (part && parameters.length > 0) {
+                saveParameters(part, parameters);
+            } else {
+                showErrorModal('Please fill in all required fields.');
+            }
+        }
+
+        async function saveParameters(part, parameters) {
+            try {
+                const responses = await Promise.all(parameters.map(param => {
+                    return window.electron.invoke('manage-parameter', {
+                        action: 'insert',
+                        id: '',
+                        part_id: part,
+                        control_item: param.controlItem,
+                        status: param.status,
+                        content: param.content,
+                        check_method: param.checkingMethod,
+                        created_by: 'current_user' // Replace with actual user
+                    });
+                }));
+
+                if (responses.every(response => response.success)) {
+                    showSuccessModal('Parameters saved successfully.');
+                } else {
+                    showErrorModal('Failed to save some parameters.');
+                }
+            } catch (error) {
+                showErrorModal('Failed to save parameters.');
+            }
+        }
+        
+        function showSuccessModal(message) {
+            const modalBody = document.getElementById('successModal').querySelector('.modal-body');
+            modalBody.textContent = message;
+            var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+        }
+
+        function showErrorModal(message) {
+            const modalBody = document.getElementById('errorModal').querySelector('.modal-body');
+            modalBody.textContent = message;
+            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            errorModal.show();
+        }
+    </script>
+</body>
+</html>

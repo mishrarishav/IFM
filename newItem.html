@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Products and Items</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0 7px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        .card-title {
+            color: #333;
+            font-size: 1rem;
+        }
+        .btn-primary {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .modal-content {
+            border-radius: 5px;
+        }
+        .table th, .table td {
+            text-align: center;
+            padding: 8px;
+        }
+        .table thead th {
+            background-color: #343a40;
+            color: #fff;
+        }
+        .table-responsive {
+            margin: 15px 0;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .form-control, .form-select {
+            font-size: 0.875rem;
+            padding: 8px;
+        }
+        .btn {
+            font-size: 0.875rem;
+            padding: 8px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab" aria-controls="products" aria-selected="true">Products</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button" role="tab" aria-controls="items" aria-selected="false">Items</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="products" role="tabpanel" aria-labelledby="products-tab">
+                <div class="row mt-2">
+                    <!-- Card for Adding Products -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Add Product</h5>
+                                <form id="addProductForm">
+                                    <div class="mb-2">
+                                        <label for="productName" class="form-label">Product Name</label>
+                                        <input type="text" class="form-control" id="productName" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Product</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Table for Managing Products -->
+                    <div class="col-md-6">
+                        <div class="table-responsive card">
+                            <table class="table" id="productsTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Product Name</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Products will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="items" role="tabpanel" aria-labelledby="items-tab">
+                <div class="card mt-2">
+                    <div class="card-body">
+                        <h5 class="card-title">Add Item to Product</h5>
+                        <form id="addItemForm">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <label for="selectProductDropdown" class="form-label">Select Product</label>
+                                    <select class="form-select" id="selectProductDropdown" required>
+                                        <option value="">Select a product</option>
+                                        <!-- Product options will be populated here -->
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="itemInputName" class="form-label">Item Name</label>
+                                    <input type="text" class="form-control" id="itemInputName" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="itemInputBarcode" class="form-label">Barcode</label>
+                                    <input type="text" class="form-control" id="itemInputBarcode" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Item</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="table-responsive card mt-2">
+                    <table class="table" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item Name</th>
+                                <th>Barcode</th>
+                                <th>Product Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Items will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="successModalLabel">Success</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Operation completed successfully.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    An error occurred. Please try again.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+       document.addEventListener('DOMContentLoaded', async () => {
+        fetchAndPopulateProducts();
+        fetchAndPopulateItems();
+
+        // Prevent form submission on Enter key press
+        document.getElementById('addProductForm').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+
+        document.getElementById('addItemForm').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+    });
+
+        document.getElementById('addProductForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const productName = document.getElementById('productName').value;
+            try {
+                await window.electron.invoke('manage-product', { action: 'insert', productName });
+                showSuccessModal('Product added successfully.');
+                // Clear form
+                document.getElementById('addProductForm').reset();
+                // Reset button text
+                resetProductFormButton();
+                // Refresh products in dropdowns and table
+                fetchAndPopulateProducts();
+            } catch (error) {
+                console.error('Failed to add product:', error);
+                showErrorModal('Failed to add product. Please try again.');
+            }
+        });
+
+        async function fetchAndPopulateProducts() {
+            try {
+                const products = await window.electron.invoke('fetch-products');
+                const selectProductDropdown = document.getElementById('selectProductDropdown');
+                const productsTableBody = document.getElementById('productsTable').getElementsByTagName('tbody')[0];
+                selectProductDropdown.innerHTML = '<option value="">Select a product</option>'; // Clear existing options
+                productsTableBody.innerHTML = ''; // Clear existing rows
+                products.forEach((product, index) => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = product.productName;
+                    selectProductDropdown.appendChild(option);
+
+                    const row = productsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${product.productName}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="editProduct(${product.id}, '${product.productName}')"><i class="fas fa-edit"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteProduct(${product.id})"><i class="fas fa-trash-alt"></i> Delete</button>
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                console.error('Failed to fetch products:', error);
+                showErrorModal('Failed to fetch products. Please reload the page.');
+            }
+        }
+
+        function editProduct(productId, productName) {
+            document.getElementById('productName').value = productName;
+
+            const submitBtn = document.getElementById('addProductForm').querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update Product';
+            submitBtn.onclick = function(event) {
+                event.preventDefault();
+                updateProduct(productId);
+            };
+        }
+
+        function updateProduct(productId) {
+            const productName = document.getElementById('productName').value;
+
+            window.electron.invoke('manage-product', { action: 'update', productId, productName })
+                .then(() => {
+                    showSuccessModal('Product updated successfully.');
+                    // Clear form
+                    document.getElementById('addProductForm').reset();
+                    // Reset button text
+                    resetProductFormButton();
+                    fetchAndPopulateProducts();
+                })
+                .catch(error => {
+                    console.error('Failed to update product:', error);
+                    showErrorModal('Failed to update product. Please try again.');
+                });
+        }
+
+        function deleteProduct(productId) {
+            window.electron.invoke('manage-product', { action: 'delete', productId })
+                .then(() => {
+                    showSuccessModal('Product deleted successfully.');
+                    fetchAndPopulateProducts();
+                })
+                .catch(error => {
+                    console.error('Failed to delete product:', error);
+                    showErrorModal('Failed to delete product. Please try again.');
+                });
+        }
+
+        document.getElementById('addItemForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const productId = document.getElementById('selectProductDropdown').value;
+            const itemName = document.getElementById('itemInputName').value;
+            const barcode = document.getElementById('itemInputBarcode').value;
+            try {
+                await window.electron.invoke('manage-item', { action: 'insert', productId, itemName, barcode });
+                showSuccessModal('Item added successfully.');
+                // Clear form
+                document.getElementById('addItemForm').reset();
+                // Reset button text
+                resetItemFormButton();
+                // Refresh items table
+                fetchAndPopulateItems();
+            } catch (error) {
+                console.error('Failed to add item:', error);
+                showErrorModal('Failed to add item. Please try again.');
+            }
+        });
+
+        async function fetchAndPopulateItems() {
+            try {
+                const items = await window.electron.invoke('fetch-items', { productName: 'all' });
+                populateItemsTable(items);
+            } catch (error) {
+                console.error('Failed to fetch items:', error);
+                showErrorModal('Failed to fetch items. Please reload the page.');
+            }
+        }
+
+        function populateItemsTable(items) {
+            const tbody = document.getElementById('itemsTable').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = ''; // Clear existing rows
+            items.forEach((item, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.itemName}</td>
+                    <td>${item.barcode}</td>
+                    <td>${item.productName}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="editItem(${item.id}, '${item.itemName}', '${item.barcode}', '${item.productId}')"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteItem(${item.id})"><i class="fas fa-trash-alt"></i> Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        function editItem(itemId, itemName, barcode, productId) {
+            document.getElementById('itemInputName').value = itemName;
+            document.getElementById('itemInputBarcode').value = barcode;
+            document.getElementById('selectProductDropdown').value = productId;
+
+            const submitBtn = document.getElementById('addItemForm').querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update Item';
+            submitBtn.onclick = function(event) {
+                event.preventDefault();
+                updateItem(itemId);
+            };
+        }
+
+        function updateItem(itemId) {
+            const productId = document.getElementById('selectProductDropdown').value;
+            const itemName = document.getElementById('itemInputName').value;
+            const barcode = document.getElementById('itemInputBarcode').value;
+
+            window.electron.invoke('manage-item', { action: 'update', itemId, productId, itemName, barcode })
+                .then(() => {
+                    showSuccessModal('Item updated successfully.');
+                    // Clear form
+                    document.getElementById('addItemForm').reset();
+                    // Reset button text
+                    resetItemFormButton();
+                    fetchAndPopulateItems();
+                })
+                .catch(error => {
+                    console.error('Failed to update item:', error);
+                    showErrorModal('Failed to update item. Please try again.');
+                });
+        }
+
+        function deleteItem(itemId) {
+            window.electron.invoke('manage-item', { action: 'delete', itemId })
+                .then(() => {
+                    showSuccessModal('Item deleted successfully.');
+                    fetchAndPopulateItems();
+                })
+                .catch(error => {
+                    console.error('Failed to delete item:', error);
+                    showErrorModal('Failed to delete item. Please try again.');
+                });
+        }
+
+        function showSuccessModal(message) {
+            const modalBody = document.getElementById('successModal').querySelector('.modal-body');
+            modalBody.textContent = message;
+            var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+        }
+
+        function showErrorModal(message) {
+            const modalBody = document.getElementById('errorModal').querySelector('.modal-body');
+            modalBody.textContent = message;
+            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            errorModal.show();
+        }
+
+        function resetProductFormButton() {
+            const submitBtn = document.getElementById('addProductForm').querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Save Product';
+            submitBtn.onclick = null; // Remove any attached event handlers
+        }
+
+        function resetItemFormButton() {
+            const submitBtn = document.getElementById('addItemForm').querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Save Item';
+            submitBtn.onclick = null; // Remove any attached event handlers
+        }
+    </script>
+</body>
+</html>

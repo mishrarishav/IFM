@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>𝙋𝙧𝙤𝙙𝙪𝙘𝙩𝙞𝙤𝙣 𝙋𝙖𝙧𝙩 𝙑𝙖𝙡𝙞𝙙𝙖𝙩𝙞𝙤𝙣 𝙏𝙤𝙤𝙡</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css">
+    <style>
+        /* Loader CSS */
+        .loader {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: #fff url('./assets/loader.gif') no-repeat center; 
+            z-index: 9999;
+            display: block; 
+        }
+        /* Rest of your CSS */
+        .input-group-prepend .fa {
+            width: 2.25rem;
+            text-align: center;
+        }
+        .card {
+            background-color: rgba(186, 186, 186, 0.477); /* Set the background color to semi-transparent white */
+            backdrop-filter: blur(5px); /* Add a subtle blur effect */
+            margin-top: 170px;
+        }
+        body {
+            background-image: url('./assets/bg4.jpg'); /* Replace 'path_to_your_image.jpg' with your actual image path */
+            background-size: cover; /* Cover the entire page */
+            background-position: center; /* Center the background image */
+            background-repeat: no-repeat;
+        }
+        .form-group .input-group{
+          gap: 10px;
+        }
+        .input-group-text {
+            height: 40px;
+         
+        }
+        .btn-success {
+            justify-content: center;
+            align-items: center;
+
+        }
+    </style>
+   
+</head>
+<body>
+  <br><br>
+    <div ></div>
+    <div class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="text-center">Login</h3>
+                        <form>
+                            <div class="form-group">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="basic-addon1"><i class="fa fa-user"></i></span>
+                                    </div>
+                                    <input type="text" class="form-control" id="username" placeholder="Enter username" aria-label="Username" aria-describedby="basic-addon1">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="basic-addon2"><i class="fa fa-lock"></i></span>
+                                    </div>
+                                    <input type="password" class="form-control" id="password" placeholder="Password" aria-label="Password" aria-describedby="basic-addon2">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Log in</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h2 class="text-center">𝔻𝕖𝕧𝕖𝕝𝕠𝕡𝕖𝕕 𝔹𝕪 𝕄𝕒𝕙𝕒𝕕 𝔾𝕝𝕠𝕓𝕦𝕤 𝕀𝕟𝕕𝕚𝕒</h2>
+
+<!-- Invalid Credentials Modal -->
+<div class="modal fade" id="invalidCredentialsModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalLabel">Login Failed</h5>
+        </div>
+        <div class="modal-body">
+          Invalid credentials. Please try again.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+         document.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('loader').style.display = 'none';
+          });
+        document.querySelector('form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const username = document.getElementById('username').value;
+          const password = document.getElementById('password').value;
+      
+          window.electron.send('login-attempt', { username, password });
+        });
+
+
+
+        
+      
+        window.electron.receive('login-response', (data) => {
+          if (data.success) {
+            localStorage.setItem('currentUser', JSON.stringify(data.user)); // Store user data in localStorage
+            window.electron.send('set-menu', data.role);
+            window.electron.send('navigate', './mainPage.html'); 
+            console.log('Login successful', data.role);
+          } else {
+            console.log('Login failed', data.error);
+           
+            
+            var invalidCredentialsModal = new bootstrap.Modal(document.getElementById('invalidCredentialsModal'));
+            invalidCredentialsModal.show();
+          }
+        });
+
+        // Listen for database connection errors
+        window.electron.receive('db-connection-error', (errorMessage) => {
+          console.error('Database connection error:', errorMessage);
+          alert('Database connection error: ' + errorMessage);
+        });
+      </script>
+
+</body>
+</html>

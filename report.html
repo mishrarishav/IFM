@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css">
+    <style>
+        .btn-yellow { background-color: #ffc107; color: black; }
+        .btn-green { background-color: #28a745; color: white; }
+        .hide { display: none; }
+        .table-responsive { max-height: 600px; overflow-y: auto; overflow-x: auto; border: 1px solid #dee2e6; }
+        .table { width: 100%; border-collapse: collapse; font-size: x-small; text-align: center; text-wrap: wrap; }
+        .table th, .table td { text-align: center; padding: 1px; border: 1px solid #dee2e6; max-width: 150px; word-wrap: break-word; white-space: normal; font-weight: bold; }
+        .table thead th { background-color: #343a40; color: #fff; font-weight: bold; }
+        .table tbody tr { background-color: #343a40; color: #fff; }
+        .highlight-row { background-color: #343a40; color: #fff; }
+        .scanned-part-row { background-color: #f8d7da; }
+        .status-ok { background-color: #d4edda !important; }
+        .status-not-ok { background-color: #f8d7da !important; }
+        .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
+        .card-custom { margin-bottom: 20px; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .card-header-custom { background-color: #6ca0d3; color: #fff; padding: 10px; border-radius: 10px 10px 0 0; }
+        .card-body-custom { padding: 20px; }
+        .form-group-custom { margin-bottom: 15px; }
+        .form-label-custom { font-weight: bold; }
+        .btn-custom { margin-right: 10px; }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="card card-custom">
+            <div class="card-header card-header-custom">
+                <h5>Report</h5>
+            </div>
+            <div class="card-body card-body-custom">
+                <form id="scanForm" class="mb-4">
+                    <div class="form-group form-group-custom">
+                        <label for="partSelect" class="form-label form-label-custom">Select Part</label>
+                        <select class="form-control" id="partSelect" onchange="handlePartChange()">
+                            <option value="">Select...</option>
+                            <!-- Populate this dropdown with parts -->
+                        </select>
+                    </div>
+                
+                    <div class="row">
+                        <div class="col-md-12 d-flex justify-content-between">
+                            <!-- <button type="button" class="btn btn-primary btn-custom" onclick="scanPart()">Scan</button>
+                            <button type="button" class="btn btn-primary btn-custom" onclick="saveScans()">Save</button> -->
+                            <button type="button" class="btn btn-green btn-custom" onclick="exportToExcel()">Export to Excel</button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group form-group-custom">
+                                <div id="parameters" class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <!-- Table headers -->
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr id="controlItemsRow">
+                                                <td style="background-color: #343a40; color: #fff;">Control Items</td>
+                                            </tr>
+                                            <tr id="contentItemsRow" class="highlight-row">
+                                                <td style="background-color: #343a40; color: #fff;">Content</td>
+                                            </tr>
+                                            <tr id="checkingMethodsRow" class="highlight-row">
+                                                <td style="background-color: #343a40; color: #fff;">Checking Methods</td>
+                                            </tr>
+                                            <tr class="scanned-part-row">
+                                                <td style="background-color: #64809b; color: #fff;">Scanned Barcode / Spring</td>
+                                                <td colspan="0">
+                                              
+                                                    <div id="statusButtons" style="display: none;">
+                                                        <p>Select OK for all fields or Not OK for all fields:</p>
+                                                        <button type="button" class="btn btn-success btn-custom" onclick="setStatus('OK')">OK</button>
+                                                        <button type="button" class="btn btn-danger btn-custom" onclick="setStatus('NOT OK')">Not OK</button>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    Remarks
+                                                    
+                                                </td>
+                                            </tr>
+
+
+                                        </tbody>
+                                        <tbody id="scannedPartsTableBody">
+                                            <!-- Scanned parts will be added here dynamically -->
+                                             <tr>
+                                                
+                                             </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="node_modules/xlsx/dist/xlsx.full.min.js"></script>
+
+    <script>
+        let scanCounter = 0; 
+        let currentBarcode = ''; 
+        let currentScanData = []; 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchPartDropdown();
+            populateControlItems();
+            populateContentItems();
+            populateCheckingMethods();
+            // fetchSplitStatusByPartId();
+
+            // Initialize Toast
+            var saveToast = new bootstrap.Toast(document.getElementById('saveToast'));
+        });
+
+        let partsData = [];
+        let selectedPart = null;
+        let scanCount = 0;
+      
+        const controlItems = [];
+        const contentItems = [];
+        const checkingMethods = [];
+
+        function fetchPartDropdown() {
+            window.electron.send('fetch-part', { vcode: 'partDropdown', id: '', col: '' });
+            window.electron.receive('part-fetched', (response) => {
+                if (response.success) {
+                    partsData = response.part;
+                    populatePartDropdown(partsData);
+                } else {
+                    console.error('Error fetching part:', response.error);
+                }
+            });
+        }
+
+        function populatePartDropdown(parts) {
+            const select = document.getElementById('partSelect');
+            select.innerHTML = '<option value="">Select...</option>';
+            parts.forEach(part => {
+                const option = document.createElement('option');
+                option.value = part.id;
+                option.text = part.part;
+                select.appendChild(option);
+            });
+        }
+
+        function handlePartChange() {
+            scanCount = 0;
+            const partId = document.getElementById('partSelect').value;
+            selectedPart = partsData.find(part => part.id == partId);
+          
+            fetchParameters(partId);
+            fetchSplitStatusByPartId(partId);
+        }
+
+        function clearScannedPartsTable() {
+            const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
+            scannedPartsTableBody.innerHTML = ''; // Clear all rows
+        }
+
+        let parameterCount = 0;
+
+        function fetchParameters(selectedPart) {
+            window.electron.send('fetch-parametre', { vcode: 'parametres', id: selectedPart, col: '' });
+            window.electron.receive('parametre-fetched', (response) => {
+                if (response.success) {
+                    parameterCount = response.count;
+                    document.querySelector('.scanned-part-row td[colspan]').setAttribute('colspan', parameterCount);
+                    controlItems.length = 0;
+                    contentItems.length = 0;
+                    checkingMethods.length = 0;
+                    clearScannedPartsTable();
+                    clearTableContent();
+                    response.parametre.forEach(item => {
+                        controlItems.push(item.control_item);
+                        contentItems.push(item.content);
+                        checkingMethods.push(item.check_method);
+                    });
+                    populateControlItems();
+                    populateContentItems();
+                    populateCheckingMethods();
+                    console.log(response.parametre);
+                    console.log('Number of parameters:', parameterCount);
+                } else {
+                    console.error('Error fetching parameters:', response.error);
+                }
+            });
+        }
+
+        function clearTableContent() {
+            document.getElementById('controlItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Control Items</td>';
+            document.getElementById('contentItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Content</td>';
+            document.getElementById('checkingMethodsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Checking Methods</td>';
+            document.getElementById('scannedPartsTableBody').innerHTML = '';
+            // document.getElementById('scannedPartsTableBody').innerHTML = '<td style="background-color: #343a40; color: #fff;">Scanned Barcode / Spring</td>';
+            // document.getElementById('scannedPartsTableBody').innerHTML = '<td style="background-color: #343a40; color: #fff;">Remarks</td>';
+        }
+
+        function populateControlItems() {
+            const controlItemsRow = document.getElementById('controlItemsRow');
+            controlItems.forEach(item => {
+                const td = document.createElement('td');
+                td.textContent = item;
+                controlItemsRow.appendChild(td);
+            });
+        }
+
+        function populateContentItems() {
+            const contentItemsRow = document.getElementById('contentItemsRow');
+            contentItems.forEach(item => {
+                const td = document.createElement('td');
+                td.textContent = item;
+                contentItemsRow.appendChild(td);
+            });
+        }
+
+        function populateCheckingMethods() {
+            const checkingMethodsRow = document.getElementById('checkingMethodsRow');
+            checkingMethods.forEach(item => {
+                const td = document.createElement('td');
+                td.textContent = item;
+                checkingMethodsRow.appendChild(td);
+            });
+        }
+
+        function removeExistingBackdrop() {
+            // Remove any remaining backdrop that might not have been removed
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            if (existingBackdrops.length > 0) {
+                existingBackdrops.forEach(backdrop => backdrop.remove());
+            }
+        }
+
+        // Listen to modal hidden events and remove backdrops
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('hidden.bs.modal', function (event) {
+                removeExistingBackdrop();
+            });
+        });
+
+        function fetchSplitStatusByPartId(partId) {
+            window.electron.send('fetch-split-status-by-part-id', partId);
+            window.electron.receive('split-status-by-part-id-fetched', (response) => {
+                if (response.success) {
+                    const data = response.data;
+                    console.log(data);
+                    data.forEach(item => {
+                        const statusItems = Object.keys(item)
+                            .filter(key => key.startsWith('status_item'))
+                            .map(key => item[key]);
+                        addScannedPartRow(item.barcode, statusItems, item.remarks, item.spring);
+                    });
+                }
+            });
+        }
+
+        function addScannedPartRow(barcode, statusItems, remarks, spring) {
+            const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
+
+            // Ensure scannedPartsTableBody is a valid table body element
+            if (!scannedPartsTableBody || !scannedPartsTableBody.insertRow) {
+                console.error('scannedPartsTableBody is not a valid table body element');
+                return;
+            }
+
+            const row = scannedPartsTableBody.insertRow(); // Insert at the bottom
+            row.classList.add('scanned-part-row');
+
+            // Combine barcode and spring data in the same cell with labels and a new line
+            let barcodeCellContent = `<span style="background-color: #436586c7; color: white;padding: 1px;border-radius: 3px;">Barcode:</span> ${barcode}`;
+            if (spring) {
+                barcodeCellContent += `<br><br><span style="background-color: #436586c7; color: white;padding: 1px;border-radius: 3px;">Spring:</span> ${spring}`;
+            }
+
+            // Create the row content
+            row.innerHTML = `<td>${barcodeCellContent}</td>` + statusItems.map(status => {
+                return `<td>${status}</td>`;
+            }).join('');
+
+            // Add an input field for remarks
+            row.innerHTML += `<td>"${remarks}" </td>`;
+
+            // updateRowColor(row);
+            console.log('Hiding statusButtons in addScannedPartRow');
+        }
+
+        function updateRowColor(row) {
+            const selects = row.querySelectorAll('select');
+            let allOk = true;
+            selects.forEach(select => {
+                if (select.value === 'NOT OK') {
+                    allOk = false;
+                }
+            });
+            row.classList.toggle('status-ok', allOk);
+            row.classList.toggle('status-not-ok', !allOk);
+        }
+
+        function updateRemarks(input) {
+            // You can add any additional logic here if needed
+            console.log('Remarks updated:', input.value);
+        }
+
+        function exportToExcel() {
+            // Arrays to hold data
+            const controlItems = [];
+            const contentItems = [];
+            const checkingMethods = [];
+            const barcodeData = [];
+            const remarksData = [];
+            const statusData = []; // Array to hold status
+
+            // Read Control Items row
+            const controlItemsRow = document.querySelector('#controlItemsRow');
+            if (controlItemsRow) {
+                const cells = controlItemsRow.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    if (index > 0) { // Skip the first static "Control Items" cell
+                        controlItems.push(cell.textContent.trim());
+                    }
+                });
+            }
+
+            // Read Content row
+            const contentItemsRow = document.querySelector('#contentItemsRow');
+            if (contentItemsRow) {
+                const cells = contentItemsRow.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    if (index > 0) { // Skip the first static "Content" cell
+                        contentItems.push(cell.textContent.trim());
+                    }
+                });
+            }
+
+            // Read Checking Methods row
+            const checkingMethodsRow = document.querySelector('#checkingMethodsRow');
+            if (checkingMethodsRow) {
+                const cells = checkingMethodsRow.querySelectorAll('td');
+                cells.forEach((cell, index) => {
+                    if (index > 0) { // Skip the first static "Checking Methods" cell
+                        checkingMethods.push(cell.textContent.trim());
+                    }
+                });
+            }
+
+            // Read Scanned Barcode / Spring row, status, and remarks
+            const scannedPartsTableBody = document.querySelectorAll('#scannedPartsTableBody tr');
+            scannedPartsTableBody.forEach((row) => {
+                const cells = row.querySelectorAll('td');
+                const barcode = cells[0].textContent.trim();  // Get barcode from first column
+
+                // Read status for each control item (skip barcode and remarks cells)
+                let statusRow = [];
+                for (let i = 1; i < cells.length - 1; i++) {
+                    const statusSelect = cells[i].querySelector('select');
+                    if (statusSelect) {
+                        statusRow.push(statusSelect.value);
+                    }
+                }
+                statusData.push(statusRow);
+
+                // Get remarks from last column
+                const remarks = cells[cells.length - 1].querySelector('input').value || "";
+                barcodeData.push(barcode);
+                remarksData.push(remarks);
+            });
+
+            // Output the read data to console to check results
+            console.log("Control Items:", controlItems);
+            console.log("Content Items:", contentItems);
+            console.log("Checking Methods:", checkingMethods);
+            console.log("Scanned Barcode Data:", barcodeData);
+            console.log("Status Data:", statusData);  // Status data for each row
+            console.log("Remarks Data:", remarksData);
+
+            // Now you can proceed to push this data into the Excel structure and export it
+            const data = [
+                ["Control Items", ...controlItems],
+                ["Content", ...contentItems],
+        ["Checking Methods", ...checkingMethods],
+        ["Scanned Barcode / Spring", ...Array(controlItems.length).fill(""), "Remarks"]
+    ];
+
+    // Append each barcode, status, and remarks to the data array
+    barcodeData.forEach((barcode, index) => {
+        data.push([barcode, ...statusData[index], remarksData[index]]);
+    });
+
+    // Create a new workbook and add a worksheet with the data
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Apply wrapText alignment to all cells
+    for (let R = 0; R <= ws['!ref'].split(':')[1].replace(/\D/g, ''); R++) {
+        for (let C = 0; C <= controlItems.length + 1; C++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cellAddress]) ws[cellAddress] = {};
+            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            ws[cellAddress].s.alignment = { wrapText: true };
+        }
+    }
+
+    // Append the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+    // Convert the workbook to binary data
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+    // Function to convert string to array buffer
+    function s2ab(s) {
+        const buf = new ArrayBuffer(s.length);
+        const view = new Uint8Array(buf);
+        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+        return buf;
+    }
+
+    // Create a Blob from the workbook data and trigger download
+    const blob = new Blob([s2ab(wbout)], { type: "application/octet-stream" });
+    const url = window.URL.createObjectURL(blob);
+
+    // Create a temporary link to download the file
+    const a = document.createElement('a');
+    const currentDate = new Date().toISOString().replace(/[:.]/g, '-');
+    a.href = url;
+    a.download = `generated_excel_${currentDate}.xlsx`;
+    a.click();
+
+    // Clean up
+    window.URL.revokeObjectURL(url);
+}
+    </script>
+</body>
+</html>
