@@ -4,82 +4,13 @@ const path = require('path');
 const { initializeDatabase, sql } = require('./database');
 
 // Now you can use sql.VarChar, sql.Int, etc., in your input definitions
-const { SerialPort } = require('serialport');
+// const { SerialPort } = require('serialport');
 
 
 
-ipcMain.handle('list-serial-ports', async (event) => {
-  try {
-      const ports = await SerialPort.list();
-      console.log('Ports:', ports);
-      if (ports.length === 0) {
-          return { success: false, message: 'No serial ports found' };
-      }
-      return { success: true, ports };
-  } catch (error) {
-      console.error('Error listing ports:', error);
-      return { success: false, message: 'Error listing ports' };
-  }
-});
 
 
-// ipcMain.handle('list-serial-ports', async (event) => {
-//   try {
-//       const ports = await SerialPort.list();
-//       console.log('Ports:', ports);
-//       return ports;
-//   } catch (error) {
-//       console.error('Error listing ports:', error);
-//       return [];
-//   }
-// });
 
-// IPC handler for sending a command to a dynamically selected serial port
-ipcMain.handle('send-command-to-serial-port', async (event, { command, portPath }) => {
-  if (!portPath) {
-    return { success: false, message: 'No serial port selected' };
-  }
-  const dynamicPort = new SerialPort({
-      path: portPath,
-      baudRate: 9600,
-      dataBits: 8,
-      parity: 'none',
-      stopBits: 1,
-      autoOpen: false  // Ensure the port is not automatically opened
-  });
-
-  try {
-      await new Promise((resolve, reject) => {
-          dynamicPort.open((err) => {
-              if (err) {
-                  console.error('Error opening port:', err.message);
-                  reject({ success: false, message: err.message });
-              } else {
-                  resolve();
-              }
-          });
-      });
-
-      await new Promise((resolve, reject) => {
-          dynamicPort.write(command, (err) => {
-              if (err) {
-                  console.error('Error writing to port:', err.message);
-                  reject({ success: false, message: err.message });
-              } else {
-                  console.log('Command sent:', command);
-                  resolve({ success: true, message: 'Command sent' });
-              }
-          });
-      });
-  } catch (error) {
-      console.error('Error with serial port:', error);
-      return { success: false, message: error.message };
-  } finally {
-      if (dynamicPort.isOpen) {
-          dynamicPort.close();
-      }
-  }
-});
 let mainWindow;
 
 function createWindow() {
@@ -110,28 +41,27 @@ ipcMain.on('set-menu', (event, role) => {
       const template = [
         { 
           label: 'Scan Parts',
-          click: () => mainWindow.loadFile('scanPartVarient.html') // 'Scan Parts' pe click karne par scanPart.html load hoga
+          click: () => mainWindow.loadFile('scanPartVarient.html') 
         },
         { 
           label: 'Report',
-          click: () => mainWindow.loadFile('report.html') // 'Port Setting' pe click karne par portSetting.html load hoga
+          click: () => mainWindow.loadFile('report.html') 
         },
         { 
           label: 'About Us',
-          click: () => mainWindow.loadFile('aboutUs.html') // 'About Us' pe click karne par aboutUs.html load hoga
+          click: () => mainWindow.loadFile('aboutUs.html') 
         },
         { 
           label: 'Log Out',
           click: () => {
             mainWindow.loadFile('index.html');
-            const template = []; // Define a basic template or a login-specific template
+            const template = []; 
             const menu = Menu.buildFromTemplate(template);
             Menu.setApplicationMenu(menu); // Reset the menu        
           }
         }
       ];
-  // Add this inside the createWindow function or at the end of the file
-// fetch department
+
 // fetch department
 ipcMain.on('fetch-department', async (event, { vcode, id, col }) => {
   const db = await initializeDatabase();
@@ -167,22 +97,7 @@ ipcMain.on('fetch-part', async (event, { vcode = 'partDropdown', id, col }) => {
       event.reply('part-fetched', { success: false, error: error.message });
   }
 });
-//fetch Varient
-// ipcMain.on('fetch-varient', async (event, { vcode = 'fetchVarient', id ='', col ='' }) => {
-//   const db = await initializeDatabase();
-//   try {
-//       const result = await db.request()
-//           .input('vcode', sql.VarChar, vcode)
-//           .input('id', sql.VarChar, id)
-//           .input('col', sql.VarChar, col)
-//           .execute('view_all');
-//       event.reply('varient-fetched', { success: true,  varient: result.recordset });
-//       console.log('varient-fetched', result.recordset);
-//   } catch (error) {
-//       console.error('Failed to fetch varient:', error);
-//       event.reply('varient-fetched', { success: false, error: error.message });
-//   }
-// });
+
 
 ipcMain.on('fetch-varient', async (event, { vcode = 'fetchVarient', id ='n', col ='' }) => {
   const db = await initializeDatabase();
@@ -227,30 +142,18 @@ ipcMain.on('fetch-report-data', async (event, data) => {
           // Split and count status
           const statuses = record.status.split(',').map(s => s.trim());
           statusCounts.push(statuses.length);
-          // console.log('Statuses:', statuses);
-          // console.log('Status Count:', statuses.length);
-
-          // Aggregate control_item, content, and check_method
-          // controlItems.push(record.control_item);
-          // contents.push(record.content);
-          // checkMethods.push(record.check_method);
-          // console.log('Control Item:', record.control_item);
-          // console.log('Content:', record.content);
-          // console.log('Check Method:', record.check_method);
+      
 
           // Aggregate scan counts
           totalScansToday.push(record.total_scans_today);
           totalScansYesterday.push(record.total_scans_yesterday);
           totalScansDayBefore.push(record.total_scans_day_before);
-          // console.log('Total Scans Today:', record.total_scans_today);
-          // console.log('Total Scans Yesterday:', record.total_scans_yesterday);
-          // console.log('Total Scans Day Before:', record.total_scans_day_before);
+        
 
           // Aggregate total_all_ok and total_not_ok
           totalAllOk += record.total_all_ok;
           totalAllNotOk += record.total_not_ok;
-          // console.log('Total All OK:', totalAllOk);
-          // console.log('Total Not OK:', totalAllNotOk);
+        
       });
 
       // Send the aggregated data back to the renderer process
@@ -268,40 +171,13 @@ ipcMain.on('fetch-report-data', async (event, data) => {
           totalAllNotOk
       });
 
-      // console.log('Aggregated Data:', {
-      //     statusCounts,
-      //     controlItems,
-      //     contents,
-      //     checkMethods,
-      //     totalScansToday,
-      //     totalScansYesterday,
-      //     totalScansDayBefore,
-      //     totalAllOk,
-      //     totalAllNotOk
-      // });
-
-      // console.log('report-data-fetched', reportData);
   } catch (error) {
       console.error('Failed to fetch report data:', error);
       event.reply('report-data-fetched', { success: false, error: error.message });
   }
 });
 
-// ipcMain.on('fetch-report-data', async (event, data) => {
-//   const db = await initializeDatabase();
-//   try {
-//       const result = await db.request()
-//           .input('vcode', sql.VarChar, data.vcode)
-//           .input('id', sql.VarChar, data.id)
-//           .input('col', sql.VarChar, data.col)
-//           .execute('view_all');
-//       event.reply('report-data-fetched', { success: true, report: result.recordset });
-//       console.log('report-data-fetched', result.recordset);
-//   } catch (error) {
-//       console.error('Failed to fetch report data:', error);
-//       event.reply('report-data-fetched', { success: false, error: error.message });
-//   }
-// });
+
 
 
 ipcMain.on('check-duplicate', async (event, { vcode, id, col }) => {
@@ -319,20 +195,7 @@ ipcMain.on('check-duplicate', async (event, { vcode, id, col }) => {
       event.reply('duplicate-checked', { success: false, error: error.message });
   }
 });
-// ipcMain.on('fetch-report-data', async (event, { vcode = 'report', id ='', col ='' }) => {
-//   const db = await initializeDatabase();
-//   try {
-//       const result = await db.request()
-//           .input('vcode', sql.VarChar, vcode)
-//           .input('id', sql.VarChar, id)
-//           .input('col', sql.VarChar, col)
-//           .execute('view_all');
-//       event.reply('report-data-fetched', { success: true, report: result.recordset });
-//   } catch (error) {
-//       console.error('Failed to fetch report data:', error);
-//       event.reply('report-data-fetched', { success: false, error: error.message });
-//   }
-// });
+
 
 ipcMain.on('fetch-report-data', async (event, data) => {
   const db = await initializeDatabase();
@@ -388,39 +251,24 @@ ipcMain.on('fetch-parametre', async (event, { vcode, id, col }) => {
   }
 });
 
-// ipcMain.on('save-scan-data', async (event, scanData) => {
-//   const db = await initializeDatabase();
-//   try {
-//       for (const scan of scanData.scans) {
-//           await db.request()
-//               .input('part_id', sql.Int, scanData.part_id)
-//               .input('barcode', sql.VarChar, scan.barcode)
-//               .input('status', sql.VarChar, scan.statuses.join(', ')) // Join statuses with commas
-//               .input('created_on', sql.DateTime, new Date())
-//               .input('created_by', sql.VarChar, 'user') // Replace with actual user
-//               .input('remarks', sql.VarChar, scan.remarks) // Add remarks input
-//               .input('spring', sql.VarChar, scan.spring) // Add spring input
-//               .execute('save_scan_data');
-//       }
-//       event.reply('scan-data-saved', { success: true });
-//   } catch (error) {
-//       console.error('Failed to save scan data:', error);
-//       event.reply('scan-data-saved', { success: false, error: error.message });
-//   }
-// });
-// ipcMain.on('fetch-split-status-by-part-id', async (event, partId) => {
-//   const db = await initializeDatabase();
-//   try {
-//     const result = await db.request()
-//       .input('part_id', sql.Int, parseInt(partId, 10)) // Ensure partId is an integer
-//       .execute('sp_SplitStatusByPartId');
-//     event.reply('split-status-by-part-id-fetched', { success: true, data: result.recordset });
-//     console.log(result.recordset);
-//   } catch (error) {
-//     console.error('Failed to split status by part ID:', error);
-//     event.reply('split-status-by-part-id-fetched', { success: false, message: error.message });
-//   }
-// });
+
+ipcMain.on('fetch-parameter-by-varient', async (event, { vcode, id, col }) => {
+  const db = await initializeDatabase();
+  try {
+    const result = await db.request()
+      .input('vcode', sql.VarChar, vcode)
+      .input('id', sql.VarChar, id)
+      .input('col', sql.VarChar, col)
+      .execute('view_all');
+      event.reply('parameter-by-varient-fetched', { success: true, parametre: result.recordset });
+  } catch (error) {
+    console.error('Failed to fetch parameter by varient:', error);
+    event.reply('parameter-by-varient-fetched', { success: false, error: error.message });
+  }
+});
+
+
+
 ipcMain.on('fetch-split-status-by-part-id', async (event, partId) => {
   const db = await initializeDatabase();
   try {
@@ -451,6 +299,40 @@ ipcMain.on('fetch-split-status-by-part-id', async (event, partId) => {
     event.reply('split-status-by-part-id-fetched', { success: false, message: error.message });
   }
 });
+
+
+
+ipcMain.on('fetch-split-status-by-date', async (event, date) => {
+  const db = await initializeDatabase();
+  try {
+      const result = await db.request()
+          .input('createdOn', sql.Date, date)
+          .execute('GetScannedPartQualityCheckByDate');
+
+      // Process the result to group by barcode and aggregate status_item
+      const groupedData = result.recordset.reduce((acc, record) => {
+          if (!acc[record.barcode]) {
+              acc[record.barcode] = {
+                  ...record,
+                  status_items: [record.status_item]
+              };
+          } else {
+              acc[record.barcode].status_items.push(record.status_item);
+          }
+          return acc;
+      }, {});
+
+      // Convert the grouped data back to an array
+      const processedData = Object.values(groupedData);
+
+      event.reply('split-status-by-date-fetched', { success: true, data: processedData });
+  } catch (error) {
+      console.error('Failed to fetch data by date:', error);
+      event.reply('split-status-by-date-fetched', { success: false, error: error.message });
+  }
+});
+
+
 
 ipcMain.on('save-scan-data', async (event, scanData) => {
   const db = await initializeDatabase();
@@ -491,6 +373,7 @@ ipcMain.on('save-scan-data', async (event, scanData) => {
             .input('userId', sql.Int, userId)
             .input('username', sql.VarChar, username)
             .input('password', sql.VarChar, password)
+            .input('role', sql.VarChar, role)
             
             .execute('ManageUser');
         event.reply('user-managed', { success: true });
@@ -541,7 +424,11 @@ ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_
         { 
           label: 'Manage User', 
           click: () => mainWindow.loadFile('users.html') // 'Manage User' pe click karne par users.html load hoga
-        }
+        },
+        { 
+          label: 'Dashboard', 
+          click: () => mainWindow.loadFile('dashboard.html') // 'Manage User' pe click karne par users.html load hoga
+        },
       );
     }
     
@@ -657,30 +544,8 @@ ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_
     }
   });
 
-// app.on('ready', () => {
-//   const mainWindow = new BrowserWindow({
-//     width: 800,
-//     height: 600,
-//     webPreferences: {
-//       nodeIntegration: true,
-//       contextIsolation: false,
-//     },
-//   });
 
-//   mainWindow.loadFile('index.html');
-// });
 
-// app.on('window-all-closed', () => {
-//   if (process.platform !== 'darwin') {
-//     app.quit();
-//   }
-// });
-
-// app.on('activate', () => {
-//   if (BrowserWindow.getAllWindows().length === 0) {
-//     createWindow();
-//   }
-// });
 ipcMain.on('fetch-users', async (event) => {
   const db = await initializeDatabase();
   try {
@@ -697,21 +562,6 @@ ipcMain.on('fetch-users', async (event) => {
   }
 });
 
-ipcMain.handle('fetch-products', async (event) => {
-  const db = await initializeDatabase();
-  try {
-    const request = db.request();
-    const result = await request.execute('FetchProducts');
-    if (result.recordset.length > 0) {
-      return result.recordset; // Return the full recordset
-    } else {
-      return { success: false, message: 'No products found.' }; // Handle no data scenario
-    }
-  } catch (error) {
-    console.error('Failed to fetch products:', error);
-    throw new Error('Failed to fetch products: ' + error.message); // Provide more detailed error message
-  }
-});
 
 ipcMain.on('get-report-data', async (event) => {
   const db = await initializeDatabase();
@@ -726,79 +576,75 @@ ipcMain.on('get-report-data', async (event) => {
 });
 
 
+//   const db = await initializeDatabase();
+//   try {
+//     const request = db.request();
+//     request.input('productName', sql.VarChar, productName); // Ensure the parameter name matches
+//     const result = await request.execute('fetchItems');
+//     if (result.recordset.length > 0) {
+//       return result.recordset; // Return the full recordset if items are found
+//     } else {
+//       return { success: false, message: 'No items found for this product.' };
+//     }
+//   } catch (error) {
+//     console.error('Failed to fetch items:', error);
+//     throw new Error('Failed to fetch items: ' + error.message);
+//   }
+// });
 
-
-
-ipcMain.handle('fetch-items', async (event, { productName }) => {
-  const db = await initializeDatabase();
-  try {
-    const request = db.request();
-    request.input('productName', sql.VarChar, productName); // Ensure the parameter name matches
-    const result = await request.execute('fetchItems');
-    if (result.recordset.length > 0) {
-      return result.recordset; // Return the full recordset if items are found
-    } else {
-      return { success: false, message: 'No items found for this product.' };
-    }
-  } catch (error) {
-    console.error('Failed to fetch items:', error);
-    throw new Error('Failed to fetch items: ' + error.message);
-  }
-});
-
-ipcMain.handle('manage-product', async (event, { action, productId, productName }) => {
-  const db = await initializeDatabase();
-  try {
-    const request = db.request();
-    request.input('action', sql.VarChar, action);
-    request.input('productId', sql.Int, productId);
-    request.input('productName', sql.VarChar, productName);
-    const result = await request.execute('ManageProduct');
-    return { success: true, message: 'Operation successful', data: result.recordset };
-  } catch (error) {
-    console.error('Failed to manage product:', error);
-    throw new Error('Failed to manage product: ' + error.message);
-  }
-});
+// ipcMain.handle('manage-product', async (event, { action, productId, productName }) => {
+//   const db = await initializeDatabase();
+//   try {
+//     const request = db.request();
+//     request.input('action', sql.VarChar, action);
+//     request.input('productId', sql.Int, productId);
+//     request.input('productName', sql.VarChar, productName);
+//     const result = await request.execute('ManageProduct');
+//     return { success: true, message: 'Operation successful', data: result.recordset };
+//   } catch (error) {
+//     console.error('Failed to manage product:', error);
+//     throw new Error('Failed to manage product: ' + error.message);
+//   }
+// });
    
-ipcMain.handle('manage-item', async (event, { action, itemId, productId, itemName, barcode }) => {
-  const db = await initializeDatabase();
-  try {
-    const request = db.request();
-    request.input('action', sql.VarChar, action);
-    request.input('itemId', sql.Int, itemId);
-    request.input('productId', sql.Int, productId);
-    request.input('itemName', sql.VarChar, itemName);
-    request.input('barcode', sql.VarChar, barcode);
-    const result = await request.execute('ManageItem');
-    return { success: true, message: 'Operation successful', data: result.recordset };
-  } catch (error) {
-    console.error('Failed to manage item:', error);
-    throw new Error('Failed to manage item: ' + error.message);
-  }
-});
+// ipcMain.handle('manage-item', async (event, { action, itemId, productId, itemName, barcode }) => {
+//   const db = await initializeDatabase();
+//   try {
+//     const request = db.request();
+//     request.input('action', sql.VarChar, action);
+//     request.input('itemId', sql.Int, itemId);
+//     request.input('productId', sql.Int, productId);
+//     request.input('itemName', sql.VarChar, itemName);
+//     request.input('barcode', sql.VarChar, barcode);
+//     const result = await request.execute('ManageItem');
+//     return { success: true, message: 'Operation successful', data: result.recordset };
+//   } catch (error) {
+//     console.error('Failed to manage item:', error);
+//     throw new Error('Failed to manage item: ' + error.message);
+//   }
+// });
 
 
 
 
-ipcMain.handle('sequence-completed', async (event, { selectedProductId, scan_status }) => {
-  const db = await initializeDatabase();
-  const userId = currentUserId; // Use the globally stored user ID
+// ipcMain.handle('sequence-completed', async (event, { selectedProductId, scan_status }) => {
+//   const db = await initializeDatabase();
+//   const userId = currentUserId; // Use the globally stored user ID
 
-  const scanDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  try {
-    const request = db.request();
-    request.input('ProductId', sql.Int, selectedProductId);
-    request.input('UserId', sql.Int, userId);
-    request.input('ScanDate', sql.DateTime, scanDate);
-    request.input('ScanStatus', sql.VarChar, scan_status);
-    const result = await request.execute('InsertScanRecord');
-    return { success: true, message: 'Scan record inserted successfully', data: result.recordset };
-  } catch (error) {
-    console.error('Failed to insert scan record:', error);
-    return { success: false, message: error.message };
-  }
-});
+//   const scanDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+//   try {
+//     const request = db.request();
+//     request.input('ProductId', sql.Int, selectedProductId);
+//     request.input('UserId', sql.Int, userId);
+//     request.input('ScanDate', sql.DateTime, scanDate);
+//     request.input('ScanStatus', sql.VarChar, scan_status);
+//     const result = await request.execute('InsertScanRecord');
+//     return { success: true, message: 'Scan record inserted successfully', data: result.recordset };
+//   } catch (error) {
+//     console.error('Failed to insert scan record:', error);
+//     return { success: false, message: error.message };
+//   }
+// });
 
 
 // ipcMain.handle('get-scan-records', async (event, { action, filter }) => {

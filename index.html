@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>𝙋𝙧𝙤𝙙𝙪𝙘𝙩𝙞𝙤𝙣 𝙋𝙖𝙧𝙩 𝙑𝙖𝙡𝙞𝙙𝙖𝙩𝙞𝙤𝙣 𝙏𝙤𝙤𝙡</title>
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="node_modules/font-awesome/css/font-awesome.min.css">
     <style>
         /* Loader CSS */
         .loader {
@@ -60,7 +59,7 @@
                             <div class="form-group">
                                 <div class="input-group mb-3">
                                     <div class="input-group-prepend">
-                                        <span class="input-group-text" id="basic-addon1"><i class="fa fa-user"></i></span>
+                                        <span class="input-group-text" id="basic-addon1"><i class="bi bi-person"></i></span>
                                     </div>
                                     <input type="text" class="form-control" id="username" placeholder="Enter username" aria-label="Username" aria-describedby="basic-addon1">
                                 </div>
@@ -68,7 +67,7 @@
                             <div class="form-group">
                                 <div class="input-group mb-3">
                                     <div class="input-group-prepend">
-                                        <span class="input-group-text" id="basic-addon2"><i class="fa fa-lock"></i></span>
+                                        <span class="input-group-text" id="basic-addon2"><i class="bi bi-lock"></i></span>
                                     </div>
                                     <input type="password" class="form-control" id="password" placeholder="Password" aria-label="Password" aria-describedby="basic-addon2">
                                 </div>
@@ -101,9 +100,15 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-         document.addEventListener('DOMContentLoaded', (event) => {
-            document.getElementById('loader').style.display = 'none';
-          });
+        //  document.addEventListener('DOMContentLoaded', (event) => {
+        //     document.getElementById('loader').style.display = 'none';
+        //   });
+        document.addEventListener('DOMContentLoaded', (event) => {
+      const loader = document.getElementById('loader');
+      if (loader) {
+        loader.style.display = 'none';
+      }
+    });
         document.querySelector('form').addEventListener('submit', (e) => {
           e.preventDefault();
           const username = document.getElementById('username').value;
