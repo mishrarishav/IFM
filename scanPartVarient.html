@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -126,6 +124,27 @@
             border-bottom: 1px solid #5A0000;
             /* Darker border */
         }
+
+        .digit {
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 4px;
+            border-radius: 5px;
+            background-color: #444;
+            color: white;
+
+        }
+
+
+
+        /* Apply Pulse Animation */
+        #scansCompleted {
+            animation: pulse 2s infinite;
+        }
+
+        #totalScans {
+            animation: pulse 3s infinite;
+        }
     </style>
 </head>
 
@@ -149,7 +168,8 @@
                             <div class="form-group form-group-custom">
                                 <label for="scanRearPart" class="form-label form-label-custom">Scan Barcode:</label>
                                 <!-- <input type="text" class="form-control" id="scanRearPart" maxlength="27"> -->
-                                <input type="text" class="form-control" id="scanRearPart" oninput="limitInput(this, 27)">
+                                <input type="text" class="form-control" id="scanRearPart"
+                                    oninput="limitInput(this, 27)">
                             </div>
                         </div>
                     </div>
@@ -157,7 +177,8 @@
                         <div class="col-md-4">
                             <div class="form-group form-group-custom">
                                 <label for="scanFrontPart" class="form-label form-label-custom">Scan Barcode:</label>
-                                <input type="text" class="form-control" id="scanFrontPart" oninput="limitInput(this, 27)">
+                                <input type="text" class="form-control" id="scanFrontPart"
+                                    oninput="limitInput(this, 27)">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -170,13 +191,20 @@
                     </div>
                     <div class="row">
                         <div class="col-md-12 d-flex justify-content-between align-items-center">
-                            <p>Scans Completed: <span id="scansCompleted">0</span> / <span id="totalScans"></span></p>
+
+                            <p><strong>Scans Completed: <span id="scansCompleted" class="digit">0</span> / <span
+                                        id="totalScans" class="digit">0</span></strong></p>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12 d-flex justify-content-between">
-                            <button type="button" disabled class="btn btn-primary btn-custom" onclick="scanPart()">Scan</button>
-                            <button type="button" class="btn btn-primary btn-custom" onclick="saveScans()">Save</button>
+                            <button type="button" disabled class="btn btn-primary btn-custom"
+                                onclick="scanPart()">Scan</button>
+                            <!-- <button type="button" class="btn btn-primary btn-custom" onclick="saveScans()">Save</button> -->
+                            <button type="button" class="btn btn-primary btn-custom" onclick="localSaveScans()">Local
+                                Save</button>
+                            <!-- <button type="button" class="btn btn-danger btn-custom" onclick="clearLocalStorage()">Clear Local Storage</button> -->
+                            <!-- <button type="button" class="btn btn-danger btn-custom" onclick="clearLocalStorageForPart(document.getElementById('partSelect').value)">Clear Local Storage for Part</button> -->
                             <button type="button" class="btn btn-green btn-custom" onclick="exportToExcel()">Export to
                                 Excel</button>
                         </div>
@@ -238,11 +266,11 @@
     </div>
 
     <!-- Bootstrap Toast for success notification -->
-    <div class="toast-container">
+    <div class="toast-container" >
         <div class="toast" id="saveToast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
-                <strong class="me-auto">Success</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                <strong class="me-auto" style="background-color: rgb(69, 212, 69);">Success</strong>
+              
             </div>
             <div class="toast-body">
                 Scans saved successfully.
@@ -300,13 +328,13 @@
     <div class="modal fade" id="scanningCompleteModal" tabindex="-1" aria-labelledby="scanningCompleteModalLabel"
         aria-hidden="true">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content" style="background-color: rgba(2, 75, 2, 0.736);">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="scanningCompleteModalLabel">Scanning Completed</h5>
+                    <h5 class="modal-title" id="scanningCompleteModalLabel" style="color: white;">Scanning Completed</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p id="scanningCompleteMessage"></p>
+                    <p style="color: white;" id="scanningCompleteMessage"></p>
                 </div>
             </div>
         </div>
@@ -406,14 +434,15 @@
             });
         }
 
+       
         function handlePartChange() {
-            document.getElementById('partSelect').disabled = true; // Disable dropdown
+            document.getElementById('partSelect').disabled = true;
             document.getElementById('scansCompleted').innerHTML = 0;
             document.getElementById('scansCompleted').value = 0;
 
             document.getElementById('scanRearPart').value = '';
             document.getElementById('scanFrontPart').value = '';
-            document.getElementById('scanSpring').value = ''; // Clear spring input
+            document.getElementById('scanSpring').value = '';
             scanCount = 0;
 
             const partId = document.getElementById('partSelect').value;
@@ -423,9 +452,10 @@
                 document.getElementById('frontInputs').classList.toggle('hide', selectedPart.varient_name !== 'front');
                 document.getElementById('totalScans').textContent = selectedPart.bin_quantity;
                 if (selectedPart.varient_name === 'front') {
-                    document.getElementById('springLabel').textContent = `Expected Spring: ${selectedPart.spring}`; // Set spring label
+                    document.getElementById('springLabel').textContent = `Expected Spring: ${selectedPart.spring}`;
                 }
                 focusBarcodeInput();
+                loadLocalScans(partId); // Load local scans if available
             } else {
                 document.getElementById('rearInputs').classList.add('hide');
                 document.getElementById('frontInputs').classList.add('hide');
@@ -433,11 +463,62 @@
             fetchParameters(partId);
         }
 
+        function localSaveScans() {
+            const partId = document.getElementById('partSelect').value;
+            const scanData = { part_id: partId, scans: [] };
+            const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
+            const rows = scannedPartsTableBody.getElementsByTagName('tr');
 
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const statusSelects = rows[i].getElementsByTagName('select');
+                const statuses = Array.from(statusSelects).map(select => select.value);
+                const remarksInput = cells[cells.length - 1].querySelector('input');
+                const remarks = remarksInput ? remarksInput.value : '';
+
+                let barcode = cells[0].textContent;
+                let spring = '';
+
+                if (barcode.includes('Spring:')) {
+                    [barcode, spring] = barcode.split('Spring:').map(str => str.trim());
+                    barcode = barcode.replace('Barcode: ', '').trim();
+                    spring = spring.trim();
+                } else {
+                    barcode = barcode.replace('Barcode: ', '').trim();
+                }
+
+                scanData.scans.push({ barcode, statuses, remarks, spring });
+            }
+
+            // Save to localStorage
+            localStorage.setItem(`scanData_${partId}`, JSON.stringify(scanData));
+            // alert('Scans saved locally.');
+            console.log('Scans saved locally.');
+        }
+
+     
+        function loadLocalScans(partId) {
+            const savedData = localStorage.getItem(`scanData_${partId}`);
+            if (savedData) {
+                const scanData = JSON.parse(savedData);
+                scanData.scans.forEach(scan => {
+                    // Call addScannedPartRow with the correct parameters
+                    addScannedPartRow(scan.barcode, scan.statuses, scan.remarks, scan.spring);
+                });
+                scanCount = scanData.scans.length;
+                document.getElementById('scansCompleted').textContent = scanCount;
+            }
+        }
+        function clearLocalStorage() {
+            clearLocalStorageForPart(selectedPart.id);
+            // alert('Local storage cleared.');
+            console.log('Local storage cleared.');
+        }
 
         let parameterCount = 0;
 
         function fetchParameters(selectedPart) {
+            debugger
             window.electron.send('fetch-parametre', { vcode: 'parametres', id: selectedPart, col: '' });
             window.electron.receive('parametre-fetched', (response) => {
                 if (response.success) {
@@ -446,7 +527,7 @@
                     controlItems.length = 0;
                     contentItems.length = 0;
                     checkingMethods.length = 0;
-                    clearTableContent();
+                    // clearTableContent();
                     response.parametre.forEach(item => {
                         controlItems.push(item.control_item);
                         contentItems.push(item.content);
@@ -456,6 +537,9 @@
                     populateContentItems();
                     populateCheckingMethods();
                     console.log('Number of parameters:', parameterCount);
+                    if (parameterCount < 1) {
+                        clearTableContent();
+                    }
                 } else {
                     console.error('Error fetching parameters:', response.error);
                 }
@@ -467,6 +551,7 @@
             document.getElementById('contentItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Content</td>';
             document.getElementById('checkingMethodsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Checking Methods</td>';
             document.getElementById('scannedPartsTableBody').innerHTML = '';
+            scanCount = 0;
         }
 
         function populateControlItems() {
@@ -510,312 +595,169 @@
             });
         });
 
-      
+
 
         // Debounce function
-function debounce(func, delay) {
-    let debounceTimer;
-    return function() {
-        const context = this;
-        const args = arguments;
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => func.apply(context, args), delay);
-    };
-}
-
-// Debounced scanPart function
-const debouncedScanPart = debounce(scanPart, 500); // 500ms delay
-
-document.getElementById('scanRearPart').addEventListener('input', (event) => {
-    if (selectedPart && selectedPart.varient_name === 'rear') {
-        const value = event.target.value.trim();
-        if (value) {
-            debouncedScanPart();
-        } else {
-            setTimeout(() => {
-                event.target.value = '';
-            }, 1000);
+        function debounce(func, delay) {
+            let debounceTimer;
+            return function () {
+                const context = this;
+                const args = arguments;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => func.apply(context, args), delay);
+            };
         }
-    }
-});
 
-document.getElementById('scanFrontPart').addEventListener('input', (event) => {
-    if (selectedPart && selectedPart.varient_name === 'front') {
-        const value = event.target.value.trim();
-        if (value) {
-            setTimeout(() => {
-                document.getElementById('scanSpring').focus();
-            }, 1000); // 1-second delay
-        } else {
-            setTimeout(() => {
-                event.target.value = '';
-            }, 1000);
-        }
-    }
-});
+        // Debounced scanPart function
+        const debouncedScanPart = debounce(scanPart, 500); // 500ms delay
 
-document.getElementById('scanSpring').addEventListener('input', (event) => {
-    if (selectedPart && selectedPart.varient_name === 'front') {
-        const value = event.target.value.trim();
-        if (value) {
-            debouncedScanPart();
-        } else {
-            setTimeout(() => {
-                event.target.value = '';
-            }, 1000);
-        }
-    }
-});
-
-function scanPart() {
-    const barcodeInput = selectedPart.varient_name === 'rear' ? document.getElementById('scanRearPart') : document.getElementById('scanFrontPart');
-    const springInput = document.getElementById('scanSpring'); // Get spring input
-    currentBarcode = barcodeInput.value;
-    const currentSpring = springInput ? springInput.value : ''; // Get spring value if exists
-
-    // Hide statusButtons initially
-    document.getElementById('statusButtons').style.display = 'none';
-
-    if (currentBarcode && !currentBarcode.includes(selectedPart.part)) {
-        const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
-        partMismatchModal.show();
-        // Clear all input fields
-        document.getElementById('scanRearPart').value = '';
-        document.getElementById('scanFrontPart').value = '';
-        document.getElementById('scanSpring').value = '';
-        return;
-    }
-
-    if (selectedPart.varient_name === 'front') {
-        if (!currentSpring) {
-            focusBarcodeInput();
-            return;
-        }
-        if (!currentSpring.includes(selectedPart.spring)) {
-            const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
-            partMismatchModal.show();
-            // Clear all input fields
-            document.getElementById('scanRearPart').value = '';
-            document.getElementById('scanFrontPart').value = '';
-            document.getElementById('scanSpring').value = '';
-            return;
-        }
-    }
-
-    // Check for duplicates in the front-end scanned data
-    const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
-    const rows = scannedPartsTableBody.getElementsByTagName('tr');
-    let isDuplicate = false;
-    for (let i = 0; i < rows.length; i++) {
-        const cells = rows[i].getElementsByTagName('td');
-        let cellText = cells[0].textContent;
-
-        if (selectedPart.varient_name === 'rear') {
-            cellText = cellText.replace('Barcode: ', '');
-            if (cellText === currentBarcode) {
-                isDuplicate = true;
-                break;
+        document.getElementById('scanRearPart').addEventListener('input', (event) => {
+            if (selectedPart && selectedPart.varient_name === 'rear') {
+                const value = event.target.value.trim();
+                if (value) {
+                    debouncedScanPart();
+                } else {
+                    setTimeout(() => {
+                        event.target.value = '';
+                    }, 1000);
+                }
             }
-        } else if (selectedPart.varient_name === 'front') {
-            const [barcodePart, springPart] = cellText.split('Spring: ');
-            const cleanedBarcode = barcodePart.replace('Barcode: ', '');
-            if (cleanedBarcode === currentBarcode) {
-                isDuplicate = true;
-                break;
-            }
-        }
-    }
+        });
 
-    if (isDuplicate) {
-        const duplicateSerialModal = new bootstrap.Modal(document.getElementById('duplicateSerialModal'));
-        duplicateSerialModal.show();
-        document.getElementById('scanRearPart').value = '';
-        document.getElementById('scanFrontPart').value = '';
-        document.getElementById('scanSpring').value = ''; // Clear spring input
-    } else {
-        // Check for duplicates in the back-end database
-        window.electron.send('check-duplicate', { vcode: 'duplicate', id: '', col: currentBarcode });
-        window.electron.receive('duplicate-checked', (response) => {
-            if (response.success && response.isDuplicate) {
+        document.getElementById('scanFrontPart').addEventListener('input', (event) => {
+            if (selectedPart && selectedPart.varient_name === 'front') {
+                const value = event.target.value.trim();
+                if (value) {
+                    setTimeout(() => {
+                        document.getElementById('scanSpring').focus();
+                    }, 1000); 
+                } else {
+                    setTimeout(() => {
+                        event.target.value = '';
+                    }, 1000);
+                }
+            }
+        });
+
+        document.getElementById('scanSpring').addEventListener('input', (event) => {
+            if (selectedPart && selectedPart.varient_name === 'front') {
+                const value = event.target.value.trim();
+                if (value) {
+                    debouncedScanPart();
+                } else {
+                    setTimeout(() => {
+                        event.target.value = '';
+                    }, 1000);
+                }
+            }
+        });
+
+        function scanPart() {
+            const barcodeInput = selectedPart.varient_name === 'rear' ? document.getElementById('scanRearPart') : document.getElementById('scanFrontPart');
+            const springInput = document.getElementById('scanSpring'); // Get spring input
+            currentBarcode = barcodeInput.value;
+            const currentSpring = springInput ? springInput.value : ''; // Get spring value if exists
+
+            // Hide statusButtons initially
+            document.getElementById('statusButtons').style.display = 'none';
+
+            if (currentBarcode && !currentBarcode.includes(selectedPart.part)) {
+                const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
+                partMismatchModal.show();
+                // Clear all input fields
+                document.getElementById('scanRearPart').value = '';
+                document.getElementById('scanFrontPart').value = '';
+                document.getElementById('scanSpring').value = '';
+                return;
+            }
+
+            if (selectedPart.varient_name === 'front') {
+                if (!currentSpring) {
+                    focusBarcodeInput();
+                    return;
+                }
+                if (!currentSpring.includes(selectedPart.spring)) {
+                    const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
+                    partMismatchModal.show();
+                    // Clear all input fields
+                    document.getElementById('scanRearPart').value = '';
+                    document.getElementById('scanFrontPart').value = '';
+                    document.getElementById('scanSpring').value = '';
+                    return;
+                }
+            }
+
+            // Check for duplicates in the front-end scanned data
+            const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
+            const rows = scannedPartsTableBody.getElementsByTagName('tr');
+            let isDuplicate = false;
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                let cellText = cells[0].textContent;
+
+                if (selectedPart.varient_name === 'rear') {
+                    cellText = cellText.replace('Barcode: ', '');
+                    if (cellText === currentBarcode) {
+                        isDuplicate = true;
+                        break;
+                    }
+                } else if (selectedPart.varient_name === 'front') {
+                    const [barcodePart, springPart] = cellText.split('Spring: ');
+                    const cleanedBarcode = barcodePart.replace('Barcode: ', '');
+                    if (cleanedBarcode === currentBarcode) {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isDuplicate) {
                 const duplicateSerialModal = new bootstrap.Modal(document.getElementById('duplicateSerialModal'));
                 duplicateSerialModal.show();
                 document.getElementById('scanRearPart').value = '';
                 document.getElementById('scanFrontPart').value = '';
                 document.getElementById('scanSpring').value = ''; // Clear spring input
             } else {
-                document.getElementById('statusButtons').style.display = 'block';
-                const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
-                // statusModal.show();
+                // Check for duplicates in the back-end database
+                window.electron.send('check-duplicate', { vcode: 'duplicate', id: '', col: currentBarcode });
+                window.electron.receive('duplicate-checked', (response) => {
+                    if (response.success && response.isDuplicate) {
+                        const duplicateSerialModal = new bootstrap.Modal(document.getElementById('duplicateSerialModal'));
+                        duplicateSerialModal.show();
+                        document.getElementById('scanRearPart').value = '';
+                        document.getElementById('scanFrontPart').value = '';
+                        document.getElementById('scanSpring').value = ''; // Clear spring input
+                    } else {
+                        document.getElementById('statusButtons').style.display = 'block';
+                        const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+                        // statusModal.show();
+                    }
+                });
             }
-        });
-    }
-}
+        }
 
-function limitInput(input, maxLength) {
-    const valueWithoutSpaces = input.value.replace(/\s/g, '');
-    if (valueWithoutSpaces.length > maxLength) {
-        input.value = valueWithoutSpaces.slice(0, maxLength);
-    }
-}
+        function limitInput(input, maxLength) {
+            const valueWithoutSpaces = input.value.replace(/\s/g, '');
+            if (valueWithoutSpaces.length > maxLength) {
+                input.value = valueWithoutSpaces.slice(0, maxLength);
+            }
+        }
 
-function focusBarcodeInput() {
-    if (selectedPart.varient_name === 'rear') {
-        document.getElementById('scanRearPart').focus();
-    } else if (selectedPart.varient_name === 'front') {
-        document.getElementById('scanFrontPart').focus();
-    }
-}
+        function focusBarcodeInput() {
+            if (selectedPart.varient_name === 'rear') {
+                document.getElementById('scanRearPart').focus();
+            } else if (selectedPart.varient_name === 'front') {
+                document.getElementById('scanFrontPart').focus();
+            }
+        }
 
-// Event listeners for modal close to refocus on input
-document.getElementById('partMismatchModal').addEventListener('hidden.bs.modal', focusBarcodeInput);
-document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.modal', focusBarcodeInput);
-// function scanPart() {
-        //     const barcodeInput = selectedPart.varient_name === 'rear' ? document.getElementById('scanRearPart') : document.getElementById('scanFrontPart');
-        //     const springInput = document.getElementById('scanSpring'); // Get spring input
-        //     currentBarcode = barcodeInput.value;
-        //     const currentSpring = springInput ? springInput.value : ''; // Get spring value if exists
-        //     if (currentBarcode && !currentBarcode.includes(selectedPart.part)) {
-        //         debugger
-        //         const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
-        //         partMismatchModal.show();
-        //         // focusBarcodeInput();
-
-              
-        //     }
-        //     if (scanCount >= selectedPart.bin_quantity) {
-        //         const binQtyCompleteModal = new bootstrap.Modal(document.getElementById('binQtyCompleteModal'));
-        //         binQtyCompleteModal.show();
-        //         document.getElementById('partSelect').disabled = false; // Enable dropdown
-        //         return;
-        //     }
-        //     // removeExistingBackdrop();
-
-
-
-
-        //     //have to work here 
-
-          
-        //     if (selectedPart.varient_name === 'front') {
-        //         if (!currentSpring) {
-
-        //             focusBarcodeInput();
-        //             return;
-        //         }
-        //                //have to work here also
-        //         if (!currentSpring.includes(selectedPart.spring)) {
-        //             debugger
-        //             const partMismatchModal = new bootstrap.Modal(document.getElementById('partMismatchModal'));
-        //             partMismatchModal.show();
-        //             focusBarcodeInput();
-        //             document.getElementById('scanSpring').value = '';
-        //             document.getElementById('scanFrontPart').value = '';
-        //             document.getElementById('scanSpring').value = '';
-        //             return;
-        //         }
-        //     }
-
-        //     // Check for duplicates in the front-end scanned data
-        //     const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
-        //     const rows = scannedPartsTableBody.getElementsByTagName('tr');
-        //     let isDuplicate = false;
-        //     for (let i = 0; i < rows.length; i++) {
-        //         const cells = rows[i].getElementsByTagName('td');
-        //         let cellText = cells[0].textContent;
-
-        //         if (selectedPart.varient_name === 'rear') {
-        //             cellText = cellText.replace('Barcode: ', '');
-        //             if (cellText === currentBarcode) {
-        //                 isDuplicate = true;
-        //                 break;
-        //             }
-        //         } else if (selectedPart.varient_name === 'front') {
-        //             const [barcodePart, springPart] = cellText.split('Spring: ');
-        //             const cleanedBarcode = barcodePart.replace('Barcode: ', '');
-        //             if (cleanedBarcode === currentBarcode) {
-        //                 isDuplicate = true;
-        //                 break;
-        //             }
-        //         }
-        //     }
-
-        //     if (isDuplicate) {
-        //         const duplicateSerialModal = new bootstrap.Modal(document.getElementById('duplicateSerialModal'));
-        //         duplicateSerialModal.show();
-        //         document.getElementById('scanRearPart').value = '';
-        //         document.getElementById('scanFrontPart').value = '';
-        //         document.getElementById('scanSpring').value = ''; // Clear spring input
-        //         focusBarcodeInput();
-        //     } else {
-        //         // Check for duplicates in the back-end database
-        //         window.electron.send('check-duplicate', { vcode: 'duplicate', id: '', col: currentBarcode });
-        //         window.electron.receive('duplicate-checked', (response) => {
-        //             if (response.success && response.isDuplicate) {
-        //                 const duplicateSerialModal = new bootstrap.Modal(document.getElementById('duplicateSerialModal'));
-        //                 duplicateSerialModal.show();
-        //                 document.getElementById('scanRearPart').value = '';
-        //                 document.getElementById('scanFrontPart').value = '';
-        //                 document.getElementById('scanSpring').value = ''; // Clear spring input
-        //                 focusBarcodeInput();
-        //             } else {
-        //                 document.getElementById('statusButtons').style.display = 'block';
-        //                 debugger
-        //                 const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
-        //                 // statusModal.show();
-        //             }
-        //         });
-        //     }
-        // }
-      
-        // Adding event listeners for automatic scanning with delay and input validation
-        // document.getElementById('scanRearPart').addEventListener('input', (event) => {
-        //     if (selectedPart && selectedPart.varient_name === 'rear') {
-        //         const value = event.target.value.trim();
-        //         if (value) {
-        //             setTimeout(scanPart, 1000); // 1-second delay
-        //         } else {
-        //             setTimeout(() => {
-        //                 event.target.value = '';
-        //             }, 1000);
-        //         }
-        //     }
-        // });
-
-        // document.getElementById('scanFrontPart').addEventListener('input', (event) => {
-        //     if (selectedPart && selectedPart.varient_name === 'front') {
-        //         const value = event.target.value.trim();
-        //         if (value) {
-        //             setTimeout(() => {
-        //                 document.getElementById('scanSpring').focus();
-        //             }, 1000); // 1-second delay
-        //         } else {
-        //             setTimeout(() => {
-        //                 event.target.value = '';
-        //             }, 1000);
-        //         }
-        //     }
-        // });
-
-        // document.getElementById('scanSpring').addEventListener('input', (event) => {
-        //     if (selectedPart && selectedPart.varient_name === 'front') {
-        //         const value = event.target.value.trim();
-        //         if (value) {
-        //             setTimeout(scanPart, 1000); // 1-second delay
-        //         } else {
-        //             setTimeout(() => {
-        //                 event.target.value = '';
-        //             }, 1000);
-        //         }
-        //     }
-        // });
-
-
-
-
+        // Event listeners for modal close to refocus on input
+        document.getElementById('partMismatchModal').addEventListener('hidden.bs.modal', focusBarcodeInput);
+        document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.modal', focusBarcodeInput);
 
         function setStatus(status) {
             scanCount++;
-            debugger
+            // debugger
             if (currentBarcode) {
                 const springInput = document.getElementById('scanSpring'); // Get spring input
                 const currentSpring = springInput ? springInput.value : ''; // Get spring value if exists
@@ -829,7 +771,8 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                     document.getElementById('saveRemarksButton').onclick = function () {
                         const remarks = document.getElementById('remarksInput').value;
                         if (remarks.trim() === '') {
-                            alert('Please enter remarks for NOT OK status.');
+                            // alert('Please enter remarks for NOT OK status.');
+                            console.log('Please enter remarks for NOT OK status.');
                             return;
                         }
                         addScannedPartRow(currentBarcode, status, remarks, currentSpring);
@@ -849,15 +792,10 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                 if (statusModal) {
                     statusModal.hide();
                 }
-                debugger
+                // debugger
                 document.getElementById('statusButtons').style.display = 'none';
             }
         }
-    
-
-
-
-
 
         function finalizeScan() {
             if (scanCount >= selectedPart.bin_quantity) {
@@ -867,34 +805,39 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                 });
                 document.getElementById('scanningCompleteMessage').textContent = `Scanning for the part ${selectedPart.part} is completed with total ${selectedPart.bin_quantity} Bin quantity.`;
                 scanningCompleteModal.show();
+
+                // Save to database
                 saveScans();
+
+                // Clear local storage for the part
+                clearLocalStorageForPart(selectedPart.id);
+
                 document.getElementById('partSelect').disabled = false; // Enable dropdown
-            resetForm();
+                resetForm();
             }
         }
+
         function resetForm() {
             document.getElementById('scanForm').reset(); // Reset the form
-    document.getElementById('partSelect').disabled = false; // Enable dropdown
-    document.getElementById('scansCompleted').textContent = '0';
-    document.getElementById('totalScans').textContent = '';
-    document.getElementById('rearInputs').classList.add('hide');
-    document.getElementById('frontInputs').classList.add('hide');
-    document.getElementById('scannedPartsTableBody').innerHTML = ''; // Clear scanned parts table
+            document.getElementById('partSelect').disabled = false; // Enable dropdown
+            document.getElementById('scansCompleted').textContent = '0';
+            document.getElementById('totalScans').textContent = '';
+            document.getElementById('rearInputs').classList.add('hide');
+            document.getElementById('frontInputs').classList.add('hide');
+            document.getElementById('scannedPartsTableBody').innerHTML = ''; // Clear scanned parts table
 
-    // Clear table rows for control items, content, and checking methods
-    document.getElementById('controlItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Control Items</td>';
-    document.getElementById('contentItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Content</td>';
-    document.getElementById('checkingMethodsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Checking Methods</td>';
+            // Clear table rows for control items, content, and checking methods
+            document.getElementById('controlItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Control Items</td>';
+            document.getElementById('contentItemsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Content</td>';
+            document.getElementById('checkingMethodsRow').innerHTML = '<td style="background-color: #343a40; color: #fff;">Checking Methods</td>';
 
-    scanCount = 0;
-    selectedPart = null;
-  
-}
+            scanCount = 0;
+            selectedPart = null;
 
+        }
 
-
-
-        function addScannedPartRow(barcode, status, remarks, spring) {
+        function addScannedPartRow(barcode, statuses, remarks, spring) {
+            // debugger
             const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
             const numColumns = controlItems.length;
 
@@ -907,20 +850,35 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                 barcodeCellContent += `<br><br><span style="background-color: #436586c7; color: white;padding: 1px;border-radius: 3px;">Spring:</span> ${spring}`;
             }
 
-            row.innerHTML = `<td>${barcodeCellContent}</td>` + Array(numColumns).fill().map(() => {
-                let selectOptions = '<td><select class="form-control" style="font-size: small; width: auto;" onchange="updateRowColor(this)">';
-                if (status === 'OK') {
-                    selectOptions += '<option value="OK" style="font-size: small;" selected>OK</option>';
-                    selectOptions += '<option value="--" style="font-size: small;">--</option>';
-                    selectOptions += '<option value="NOT OK" style="font-size: small;">NOT OK</option>';
-                } else {
-                    selectOptions += '<option value="OK" style="font-size: small;">OK</option>';
-                    selectOptions += '<option value="--" style="font-size: small;" selected>--</option>';
-                    selectOptions += '<option value="NOT OK" style="font-size: small;">NOT OK</option>';
-                }
-                selectOptions += '</select></td>';
-                return selectOptions;
-            }).join('');
+            row.innerHTML = `<td>${barcodeCellContent}</td>`;
+
+            if (Array.isArray(statuses)) {
+                // New functionality for loading from local storage
+                row.innerHTML += statuses.map(status => {
+                    let selectOptions = '<td><select class="form-control" style="font-size: small; width: auto;" onchange="updateRowColor(this)">';
+                    selectOptions += `<option value="OK" style="font-size: small;" ${status === 'OK' ? 'selected' : ''}>OK</option>`;
+                    selectOptions += `<option value="--" style="font-size: small;" ${status === '--' ? 'selected' : ''}>--</option>`;
+                    selectOptions += `<option value="NOT OK" style="font-size: small;" ${status === 'NOT OK' ? 'selected' : ''}>NOT OK</option>`;
+                    selectOptions += '</select></td>';
+                    return selectOptions;
+                }).join('');
+            } else {
+                // Old functionality for real-time scanning
+                row.innerHTML += Array(numColumns).fill().map(() => {
+                    let selectOptions = '<td><select class="form-control" style="font-size: small; width: auto;" onchange="updateRowColor(this)">';
+                    if (statuses === 'OK') {
+                        selectOptions += '<option value="OK" style="font-size: small;" selected>OK</option>';
+                        selectOptions += '<option value="--" style="font-size: small;">--</option>';
+                        selectOptions += '<option value="NOT OK" style="font-size: small;">NOT OK</option>';
+                    } else {
+                        selectOptions += '<option value="OK" style="font-size: small;">OK</option>';
+                        selectOptions += '<option value="--" style="font-size: small;" selected>--</option>';
+                        selectOptions += '<option value="NOT OK" style="font-size: small;">NOT OK</option>';
+                    }
+                    selectOptions += '</select></td>';
+                    return selectOptions;
+                }).join('');
+            }
 
             // Add an input field for remarks
             row.innerHTML += `<td><input type="text" class="form-control" value="${remarks}" style="font-size: small; width: auto;" onchange="updateRemarks(this)"></td>`;
@@ -928,10 +886,11 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
             document.getElementById('scansCompleted').textContent = scanCount;
 
             updateRowColor(row);
-            debugger
             document.getElementById('statusButtons').style.display = 'none';
-            console.log('Hiding statusButtons in addScannedPartRow');
         }
+
+
+    
 
         function updateRowColor(row) {
             const selects = row.querySelectorAll('select');
@@ -951,12 +910,7 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
         }
 
 
-
         function saveScans() {
-           
-            if (scanCount >= selectedPart.bin_quantity) {
-                exportToExcel(); // Export to Excel only if bin quantity is complete
-            }
             const partId = document.getElementById('partSelect').value;
             const scanData = { part_id: partId, scans: [] };
             const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
@@ -966,13 +920,12 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                 const cells = rows[i].getElementsByTagName('td');
                 const statusSelects = rows[i].getElementsByTagName('select');
                 const statuses = Array.from(statusSelects).map(select => select.value);
-                const remarksInput = cells[cells.length - 1].querySelector('input'); // Get the input field for remarks
-                const remarks = remarksInput ? remarksInput.value : ''; // Get the value of the input field
+                const remarksInput = cells[cells.length - 1].querySelector('input');
+                const remarks = remarksInput ? remarksInput.value : '';
 
                 let barcode = cells[0].textContent;
                 let spring = '';
 
-                // Remove "Barcode: " and "Spring: " prefixes and split the barcode and spring if necessary
                 if (barcode.includes('Spring:')) {
                     [barcode, spring] = barcode.split('Spring:').map(str => str.trim());
                     barcode = barcode.replace('Barcode: ', '').trim();
@@ -983,16 +936,28 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
 
                 scanData.scans.push({ barcode, statuses, remarks, spring });
             }
+
+            // Send data to the main process to save in the database
             window.electron.send('save-scan-data', scanData);
             window.electron.receive('scan-data-saved', (response) => {
                 if (response.success) {
                     showSaveToast();
+                    setTimeout(() => {
+                        clearLocalStorageForPart(partId);
+                        resetForm();
+                        clearTableContent();
+                        location.reload();
+                    }, 3000);
                 } else {
                     console.error('Error saving scans:', response.error);
                 }
             });
-
         }
+        function clearLocalStorageForPart(partId) {
+            localStorage.removeItem(`scanData_${partId}`);
+            console.log(`Local storage cleared for part ID: ${partId}`);
+        }
+
 
 
 
@@ -1065,15 +1030,7 @@ document.getElementById('duplicateSerialModal').addEventListener('hidden.bs.moda
                 remarksData.push(remarks);
             });
 
-            // Output the read data to console to check results
-            // console.log("Control Items:", controlItems);
-            // console.log("Content Items:", contentItems);
-            // console.log("Checking Methods:", checkingMethods);
-            // console.log("Scanned Barcode Data:", barcodeData);
-            // console.log("Status Data:", statusData);  // Status data for each row
-            // console.log("Remarks Data:", remarksData);
-
-            // Now you can proceed to push this data into the Excel structure and export it
+       
             const data = [
                 ["Control Items", ...controlItems],
                 ["Content", ...contentItems],
