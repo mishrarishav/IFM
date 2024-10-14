@@ -72,7 +72,7 @@ ipcMain.on('fetch-department', async (event, { vcode, id, col }) => {
           .input('col', sql.VarChar, col)
           .execute('view_all');
       event.reply('department-fetched', { success: true, departments: result.recordset });
-      // console.log(result.recordset);
+    
   } catch (error) {
       console.error('Failed to fetch department:', error);
       event.reply('department-fetched', { success: false, error: error.message });
@@ -91,7 +91,7 @@ ipcMain.on('fetch-part', async (event, { vcode = 'partDropdown', id, col }) => {
           .input('col', sql.VarChar, col)
           .execute('view_all');
       event.reply('part-fetched', { success: true, part: result.recordset });
-      // console.log(result.recordset);
+     
   } catch (error) {
       console.error('Failed to fetch part:', error);
       event.reply('part-fetched', { success: false, error: error.message });
@@ -108,7 +108,7 @@ ipcMain.on('fetch-varient', async (event, { vcode = 'fetchVarient', id ='n', col
           .input('col', sql.VarChar, col)
           .execute('view_all');
       event.reply('varient-fetched', { success: true, varient: result.recordset });
-      // console.log('varient-fetched', result.recordset);
+    
   } catch (error) {
       console.error('Failed to fetch varient:', error);
       event.reply('varient-fetched', { success: false, error: error.message });
@@ -129,53 +129,103 @@ ipcMain.on('fetch-report-data', async (event, data) => {
       // Initialize variables to store aggregated data
       let totalAllOk = 0;
       let totalAllNotOk = 0;
-      const statusCounts = [];
-      const controlItems = [];
-      const contents = [];
-      const checkMethods = [];
-      const totalScansToday = [];
-      const totalScansYesterday = [];
-      const totalScansDayBefore = [];
+      const scansPerDay = [];
 
       // Process each record
       reportData.forEach(record => {
-          // Split and count status
-          const statuses = record.status.split(',').map(s => s.trim());
-          statusCounts.push(statuses.length);
-      
-
-          // Aggregate scan counts
-          totalScansToday.push(record.total_scans_today);
-          totalScansYesterday.push(record.total_scans_yesterday);
-          totalScansDayBefore.push(record.total_scans_day_before);
-        
-
           // Aggregate total_all_ok and total_not_ok
-          totalAllOk += record.total_all_ok;
-          totalAllNotOk += record.total_not_ok;
-        
+          totalAllOk += record.total_ok || 0;
+          totalAllNotOk += record.total_not_ok || 0;
+
+          // Collect scans per day data
+          if (record.metric === 'Scans Per Day') {
+              scansPerDay.push({
+                  date: record.date,
+                  total_scans: record.total_scans
+              });
+          }
       });
 
       // Send the aggregated data back to the renderer process
       event.reply('report-data-fetched', {
           success: true,
           report: reportData,
-          statusCounts,
-          controlItems,
-          contents,
-          checkMethods,
-          totalScansToday,
-          totalScansYesterday,
-          totalScansDayBefore,
           totalAllOk,
-          totalAllNotOk
+          totalAllNotOk,
+          scansPerDay
       });
+      console.log(reportData);
+      console.log(totalAllOk);
+      console.log(totalAllNotOk);
+      console.log(scansPerDay);
 
   } catch (error) {
       console.error('Failed to fetch report data:', error);
       event.reply('report-data-fetched', { success: false, error: error.message });
   }
 });
+
+// ipcMain.on('fetch-report-data', async (event, data) => {
+//   const db = await initializeDatabase();
+//   try {
+//       const result = await db.request()
+//           .input('vcode', sql.VarChar, data.vcode)
+//           .input('id', sql.VarChar, data.id)
+//           .input('col', sql.VarChar, data.col)
+//           .execute('view_all');
+      
+//       const reportData = result.recordset;
+
+//       // Initialize variables to store aggregated data
+//       let totalAllOk = 0;
+//       let totalAllNotOk = 0;
+//       const statusCounts = [];
+//       const controlItems = [];
+//       const contents = [];
+//       const checkMethods = [];
+//       const totalScansToday = [];
+//       const totalScansYesterday = [];
+//       const totalScansDayBefore = [];
+
+//       // Process each record
+//       reportData.forEach(record => {
+//           // Split and count status
+//           const statuses = record.status.split(',').map(s => s.trim());
+//           statusCounts.push(statuses.length);
+      
+
+//           // Aggregate scan counts
+//           totalScansToday.push(record.total_scans_today);
+//           totalScansYesterday.push(record.total_scans_yesterday);
+//           totalScansDayBefore.push(record.total_scans_day_before);
+        
+
+//           // Aggregate total_all_ok and total_not_ok
+//           totalAllOk += record.total_all_ok;
+//           totalAllNotOk += record.total_not_ok;
+        
+//       });
+
+//       // Send the aggregated data back to the renderer process
+//       event.reply('report-data-fetched', {
+//           success: true,
+//           report: reportData,
+//           statusCounts,
+//           controlItems,
+//           contents,
+//           checkMethods,
+//           totalScansToday,
+//           totalScansYesterday,
+//           totalScansDayBefore,
+//           totalAllOk,
+//           totalAllNotOk
+//       });
+
+//   } catch (error) {
+//       console.error('Failed to fetch report data:', error);
+//       event.reply('report-data-fetched', { success: false, error: error.message });
+//   }
+// });
 
 
 
@@ -206,7 +256,7 @@ ipcMain.on('fetch-report-data', async (event, data) => {
           .input('col', sql.VarChar, data.col)
           .execute('view_all');
       event.reply('report-data-fetched', { success: true, report: result.recordset });
-      // console.log('report-data-fetched', result.recordset);
+    
   } catch (error) {
       console.error('Failed to fetch report data:', error);
       event.reply('report-data-fetched', { success: false, error: error.message });
@@ -286,14 +336,16 @@ ipcMain.on('fetch-split-status-by-part-id', async (event, partId) => {
       } else {
         acc[record.barcode].status_items.push(record.status_item);
       }
+      
       return acc;
     }, {});
 
     // Convert the grouped data back to an array
     const processedData = Object.values(groupedData);
+    console.log(processedData);
 
     event.reply('split-status-by-part-id-fetched', { success: true, data: processedData });
-    console.log(processedData);
+    // console.log(processedData);
   } catch (error) {
     console.error('Failed to split status by part ID:', error);
     event.reply('split-status-by-part-id-fetched', { success: false, message: error.message });
@@ -314,7 +366,7 @@ ipcMain.on('fetch-split-status-by-date', async (event, date) => {
           if (!acc[record.barcode]) {
               acc[record.barcode] = {
                   ...record,
-                  status_items: [record.status_item]
+                  // status_items: [record.status_item]
               };
           } else {
               acc[record.barcode].status_items.push(record.status_item);
@@ -349,7 +401,7 @@ ipcMain.on('save-scan-data', async (event, scanData) => {
               .execute('save_scan_data');
 
           if (result.returnValue === -1) {
-              // Duplicate part found, handle accordingly
+            
               event.reply('scan-data-saved', { success: false, error: 'Duplicate part found' });
               return;
           }
@@ -385,30 +437,48 @@ ipcMain.on('save-scan-data', async (event, scanData) => {
 
 // Remove existing handler before registering a new one
 ipcMain.removeHandler('manage-parameter');
-ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_item, status, content, check_method, created_by }) => {
+ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_item, content, check_method }) => {
   const db = await initializeDatabase();
-  console.log(action, id, part_id, control_item, status, content, check_method, created_by);
+  const created_on = new Date().toISOString();
+  const created_by = 'current_user'; // Replace with actual logic to get the current user
+
+  // Validate the received data
+  if (!action) {
+      const errorMessage = 'Action is required';
+      console.error(errorMessage, { action });
+      return { success: false, message: errorMessage };
+  }
+
+  // Skip validation for fields if the action is 'view'
+  if (action !== 'view' && action !== 'delete' && (!part_id || !control_item || !content || !check_method)) {
+      const errorMessage = 'Missing required fields';
+      console.error(errorMessage, { action, part_id, control_item, content, check_method });
+      return { success: false, message: errorMessage };
+  }
+
+  if ((action === 'update' || action === 'delete') && !id) {
+      const errorMessage = 'ID is required for update and delete actions';
+      return { success: false, message: errorMessage };
+  }
+
   try {
-    const request = db.request();
-    request.input('action', sql.VarChar, action);
-    request.input('id', sql.Int, id);
-    request.input('part_id', sql.VarChar, part_id);
-    request.input('control_item', sql.VarChar, control_item);
-    request.input('status', sql.VarChar, status);
-    request.input('content', sql.VarChar, content);
-    request.input('check_method', sql.VarChar, check_method);
-    request.input('created_on', sql.DateTime, new Date());
-    request.input('created_by', sql.VarChar, created_by);
-    const result = await request.execute('ManageParameter');
-    return { success: true, message: 'Operation successful', data: result.recordset };
-    
+      const request = db.request();
+      request.input('action', sql.VarChar, action);
+      request.input('id', sql.Int, id || null);
+      request.input('part_id', sql.VarChar, part_id || '');
+      request.input('control_item', sql.VarChar, control_item || '');
+      request.input('content', sql.VarChar, content || '');
+      request.input('check_method', sql.VarChar, check_method || '');
+      request.input('created_on', sql.DateTime, created_on);
+      request.input('created_by', sql.VarChar, created_by);
+
+      const result = await request.execute('ManageParameter');
+      return { success: true, message: 'Operation successful', data: result.recordset };
   } catch (error) {
-    console.error('Failed to manage parameter:', error);
-    throw new Error('Failed to manage parameter: ' + error.message);
+      console.error('Failed to manage parameter:', error);
+      return { success: false, message: 'Failed to manage parameter: ' + error.message };
   }
 });
-
-
     ipcMain.on('open-new-item', (event) => {
       mainWindow.loadFile('newItem.html');
     });
@@ -474,13 +544,13 @@ ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_
       const result = await request.execute('verify_user');
      
 
-      console.log(result.recordset);
+      // console.log(result.recordset);
 
       const user = result.recordset[0];
       if (user) {
         currentUserId = user.id; // Store the user ID globally
         currentUserName = user.username; // Store the user ID globally
-        console.log(currentUserName);
+        // console.log(currentUserName);
         event.reply('login-response', { success: true, role: user.roles, userId: user.id });
       } else {
         event.reply('login-response', { success: false, error: 'Invalid credentials' });
@@ -501,8 +571,8 @@ ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_
   ipcMain.handle('manage-varient', async (event, { action, id, varient_name, part, spring, bin_quantity }) => {
     const db = await initializeDatabase();
     const created_on = new Date().toISOString();
-    const created_by = "me"; // Replace with actual user ID if available
-    // console.log('Received data:', { action, id, varient_name, part, spring });
+    const created_by = currentUserName; // Replace with actual user ID if available
+  
   
     // Validate the received data
     if (!action) {
@@ -520,7 +590,7 @@ ipcMain.handle('manage-parameter', async (event, { action, id, part_id, control_
     if (action === 'update' || action === 'delete') {
       if (!id) {
         const errorMessage = 'ID is required for update and delete actions';
-        console.error(errorMessage, { action, id });
+        // console.error(errorMessage, { action, id });
         return { success: false, message: errorMessage };
       }
     }

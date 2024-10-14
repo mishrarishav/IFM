@@ -21,7 +21,10 @@
         .status-not-ok { background-color: #f8d7da !important; }
         .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
         .card-custom { margin-bottom: 20px; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-        .card-header-custom { background-color: #6ca0d3; color: #fff; padding: 10px; border-radius: 10px 10px 0 0; }
+        .card-header-custom {       background-color: #343a40;
+            color: #fff;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;}
         .card-body-custom { padding: 20px; }
         .form-group-custom { margin-bottom: 15px; }
         .form-label-custom { font-weight: bold; }
@@ -46,11 +49,20 @@
                                 <!-- Populate this dropdown with parts -->
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <!-- <div class="col-md-4">
                             <label for="dateFilter" class="form-label form-label-custom">Filter by Date</label>
                             <input type="date" class="form-control" id="dateFilter">
+                        </div> -->
+                        
+                        <div class="col-md-8">
+                            <label for="dateRangeFilter" class="form-label form-label-custom">Date Range</label>
+                            <div class="d-flex">
+                                <input type="date" class="form-control me-2" id="fromDateFilter" placeholder="From Date">
+                                <input type="date" class="form-control" id="toDateFilter" placeholder="To Date">
+                            </div>
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
+                            
                             <button type="button" class="btn btn-primary btn-custom" onclick="searchPart()">Search</button>
                         </div>
                     </div>
@@ -195,27 +207,45 @@
             parameterData.appendChild(checkingMethodsRow);
         }
 
-        function searchPart() {
-            const partId = document.getElementById('partSelect').value;
-            const date = document.getElementById('dateFilter').value;
-            if (partId && date) {
-                fetchSplitStatusByPartIdAndDate(partId);
-            } else {
-                console.error('Part or date not selected');
-            }
-        }
+   function searchPart() {
+    const partId = document.getElementById('partSelect').value;
+    const fromDate = document.getElementById('fromDateFilter').value;
+    const toDate = document.getElementById('toDateFilter').value;
+
+    if (partId) {
+        fetchSplitStatusByPartIdAndDate(partId);
+    } else {
+        console.error('Part not selected');
+    }
+}
 
         function fetchSplitStatusByPartIdAndDate(partId) {
-            window.electron.send('fetch-split-status-by-part-id', partId);
-            window.electron.receive('split-status-by-part-id-fetched', (response) => {
-                if (response.success) {
-                    debugger
-                    const data = response.data;
-                    clearScannedPartsTable();
-                    populateScannedPartsTable(data);
-                }
+    const fromDate = document.getElementById('fromDateFilter').value;
+    const toDate = document.getElementById('toDateFilter').value;
+    window.electron.send('fetch-split-status-by-part-id', partId);
+    window.electron.receive('split-status-by-part-id-fetched', (response) => {
+        if (response.success) {
+            let data = response.data.map(item => {
+                const date = new Date(item.created_on);
+                // Convert to UTC string
+                item.created_on = date.toISOString().replace('T', ' ').substring(0, 19);
+                return item;
             });
+
+            // Filter data based on the date range
+            data = data.filter(item => {
+                const itemDate = item.created_on.substring(0, 10); // Extract yyyy-mm-dd
+                return (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
+            });
+
+            console.log(data);
+            clearScannedPartsTable();
+            populateScannedPartsTable(data);
         }
+        });
+    }
+
+ 
 
         function clearScannedPartsTable() {
             const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
@@ -234,16 +264,13 @@
         const row = scannedPartsTableBody.insertRow();
         row.classList.add('scanned-part-row');
 
-        const barcodeCellContent = `<span style="background-color: #436586c7; color: white;padding: 1px;border-radius: 3px;">Barcode:</span> ${item.barcode}`;
+        const barcodeCellContent = `<span style="background-color: #436586c7; color: white;padding: 1px;border-radius: 3px;">${data.indexOf(item) + 1}. Barcode:</span> ${item.barcode}`;
         const springContent = item.spring ? item.spring : 'No Data';
         const createdByContent = item.created_by || 'No Data';
      
 
         row.innerHTML = `
             <td>${barcodeCellContent}</td>
-            <td>${springContent}</td>
-            <td>${createdByContent}</td>
-           
         `;
 
         const parameterCount = Object.keys(item).filter(key => key.startsWith('status_item') && item[key] !== undefined).length;
@@ -253,7 +280,13 @@
             const status = item[`status_item${i}`] || '--'; // Default to '--' if null
             row.innerHTML += `<td>${status}</td>`;
         }
-        row.innerHTML += `<td>${item.remarks}</td>`;
+        row.innerHTML += `
+            <td>${item.remarks}</td>
+          
+            <td>${springContent}</td>
+            <td>${createdByContent}</td>
+            <td>${item.created_on}</td>
+        `;
     });
 
     // Adjust maxParameterCount by subtracting 1 for header generation
@@ -263,18 +296,21 @@
             const scannedHeaders = document.getElementById('scannedHeaders');
             scannedHeaders.innerHTML = `
                 <th>Scanned Barcode / Spring</th>
-                <th>Spring</th>
-                <th>
-                    Created By
-                    <input type="text" id="createdByFilter" placeholder="Filter by Created By" oninput="filterByCreatedBy()">
-                </th>
-            
             `;
 
             for (let i = 1; i <= maxCount ; i++) {
                 scannedHeaders.innerHTML += `<th>Status ${i}</th>`;
             }
-            scannedHeaders.innerHTML += '<th>Remarks</th>';
+            scannedHeaders.innerHTML += `
+                <th>Remarks</th>
+              
+                <th>Spring</th>
+                <th>
+                    Created By
+                    <input type="text" id="createdByFilter" placeholder="Filter by Created By" oninput="filterByCreatedBy()">
+                </th>
+                <th>Created On</th>
+            `;
         }
         function filterByCreatedBy() {
         const filter = document.getElementById('createdByFilter').value.toLowerCase();
@@ -294,36 +330,119 @@
         }
     }
 
-        function exportToExcel() {
-            // Select the tables
-            const parameterTable = document.querySelector('#parameters table');
-            const scannedPartsTable = document.querySelector('#scannedParts table');
+    function exportToExcel() {
+  
+    // console.log('Starting exportToExcel function');
 
-            // Convert tables to arrays
-            const parameterData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(parameterTable), { header: 1 });
-            const scannedPartsData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(scannedPartsTable), { header: 1 });
+    // Select the tables
+    const parameterTable = document.querySelector('#parameters table');
+    // console.log('Selected parameterTable:', parameterTable);
+    const scannedPartsTable = document.querySelector('#scannedParts table');
+    // console.log('Selected scannedPartsTable:', scannedPartsTable);
 
-            // Combine data into a single array
-            const combinedData = [
-                ['Parameters Table'], // Title for the first table
-                ...parameterData,
-                [],
-                ['Scanned Parts Table'], // Title for the second table
-                ...scannedPartsData
-            ];
+    // Convert tables to arrays
+    const parameterData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(parameterTable), { header: 1 });
+    // console.log('Converted parameterTable to array:', parameterData);
+    const scannedPartsData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(scannedPartsTable), { header: 1 });
+    // console.log('Converted scannedPartsTable to array:', scannedPartsData);
 
-            // Convert combined data to a sheet
-            const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
-
-            // Create a new workbook and append the sheet
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined Data');
-
-            // Write the workbook to a file
-            XLSX.writeFile(workbook, 'report.xlsx');
+    // Dynamically find the index of the "Created On" column
+    const headerRow = scannedPartsData[0];
+    const createdOnIndex = headerRow.indexOf("Crea");
+    if (createdOnIndex !== -1) {
+        for (let i = 0; i < scannedPartsData.length; i++) {
+            scannedPartsData[i].splice(createdOnIndex, 1);
         }
+        console.log('Removed "Created On" column from scannedPartsData:', scannedPartsData);
+    } else {
+        console.warn('"Created On" column not found.');
+    }
 
-        // Example usage
+    // Combine data into a single array
+    const combinedData = [
+        ['Parameters Table'], // Title for the first table
+        ...parameterData,
+        [],
+        ['Scanned Parts Table'], // Title for the second table
+        ...scannedPartsData
+    ];
+    // console.log('Combined data:', combinedData);
+
+    // Convert combined data to a sheet
+    const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
+    // console.log('Converted combined data to worksheet:', worksheet);
+
+    // Create a new workbook and append the sheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined Data');
+    // console.log('Created new workbook and appended worksheet');
+
+    // Get current date in yyyy-mm-dd format
+    const currentDateTime = new Date().toISOString().replace(/[:.]/g, '-');
+    // console.log('Current date:', currentDate);
+
+    // Write the workbook to a file with the current date in the filename
+    XLSX.writeFile(workbook, `report_${currentDateTime}.xlsx`);
+    // console.log('Workbook written to file: report_' + currentDate + '.xlsx');
+}
+
+// function exportToExcel() {
+    //     debugger
+    //     console.log('Starting exportToExcel function');
+
+    //     // Select the tables
+    //     const parameterTable = document.querySelector('#parameters table');
+    //     console.log('Selected parameterTable:', parameterTable);
+    //     const scannedPartsTable = document.querySelector('#scannedParts table');
+    //     console.log('Selected scannedPartsTable:', scannedPartsTable);
+
+    //     // Convert tables to arrays
+    //     const parameterData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(parameterTable), { header: 1 });
+    //     console.log('Converted parameterTable to array:', parameterData);
+    //     const scannedPartsData = XLSX.utils.sheet_to_json(XLSX.utils.table_to_sheet(scannedPartsTable), { header: 1 });
+    //     console.log('Converted scannedPartsTable to array:', scannedPartsData);
+
+    //     // Skip the "Created On" column (assuming it's the second column)
+    //     const dateColumnIndex = 1; // Adjust based on your table structure
+    //     for (let i = 0; i < scannedPartsData.length; i++) {
+    //         scannedPartsData[i].splice(dateColumnIndex, 1);
+    //     }
+    //     console.log('Removed "Created On" column from scannedPartsData:', scannedPartsData);
+
+    //     // Combine data into a single array
+    //     const combinedData = [
+    //         ['Parameters Table'], // Title for the first table
+    //         ...parameterData,
+    //         [],
+    //         ['Scanned Parts Table'], // Title for the second table
+    //         ...scannedPartsData
+    //     ];
+    //     console.log('Combined data:', combinedData);
+
+    //     // Convert combined data to a sheet
+    //     const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
+    //     console.log('Converted combined data to worksheet:', worksheet);
+
+    //     // Create a new workbook and append the sheet
+    //     const workbook = XLSX.utils.book_new();
+    //     XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined Data');
+    //     console.log('Created new workbook and appended worksheet');
+
+    //     // Get current date in yyyy-mm-dd format
+    //     const currentDate = new Date().toISOString().split('T')[0];
+    //     console.log('Current date:', currentDate);
+
+    //     // Write the workbook to a file with the current date in the filename
+    //     XLSX.writeFile(workbook, `report_${currentDate}.xlsx`);
+    //     console.log('Workbook written to file: report_' + currentDate + '.xlsx');
+    // }
+    //     // Example usage
+       
+       
+       
+       
+       
+       
         const response = {
             success: true,
             data: [

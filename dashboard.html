@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quality Check Report Dashboard</title>
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
     <script src="node_modules/@popperjs/core/dist/umd/popper.min.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
@@ -14,25 +13,51 @@
     <style>
         body {
             padding: 20px;
+            background-color: #f4f6f9;
         }
-        .filter-input {
-            margin-bottom: 10px;
+        .ribbon {
+            position: relative;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-radius: 5px;
         }
-        .table-responsive {
-            overflow-x: auto;
-            overflow-y: auto; /* Make table scrollable */
-            max-height: 200px; /* Set max height for table container */
+        .ribbon::before, .ribbon::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            border: 20px solid transparent;
+            border-top-color: #007bff;
         }
-        .table th, .table td {
-            white-space: nowrap;
-            font-size: x-small;
+        .ribbon::before {
+            left: 0;
+            border-right-width: 0;
+        }
+        .ribbon::after {
+            right: 0;
+            border-left-width: 0;
         }
         .card-custom {
             margin-bottom: 20px;
-            padding: 20px;
+            /* padding: 20px; */
             border-radius: 10px;
-            height: 300px; /* Fixed height for all cards */
-            overflow: hidden; /* Hide overflow */
+            height: 300px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        .card-custom h5 {
+            background-color: #007bff;
+            color: white;
+            /* padding: 10px; */
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
         }
         .chart-container {
             position: relative;
@@ -61,37 +86,56 @@
             font-weight: bold;
             color: #007bff;
         }
+        .pie-chart {
+            width: 50%;
+            height: 102%;
+            border-radius: 50%;
+            background: conic-gradient(#28a745 0% 50%, #dc3545 50% 100%);
+            position: relative;
+        }
+        .pie-chart .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        .bar-chart {
+            display: flex;
+            height: 100%;
+            align-items: flex-end;
+        }
+        .bar {
+            flex: 1;
+            margin: 0 8px; /* Increased gap between bars */
+            background-color: #227019;
+            position: relative;
+        }
+        .bar-label {
+            background-color:#77ff00;
+            position: absolute;
+            border-radius: 50%;
+            /* top: -30px; */
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .x-axis, .y-axis {
+            display: flex;
+            justify-content: space-between;
+        }
+        .y-axis {
+            flex-direction: column;
+            justify-content: space-between;
+            display: none; /* Hide y-axis */
+        }
     </style>
 </head>
 
 <body>
     <div class="container mt-5">
-        <div class="row mb-3">
-            <h1>Quality Check Dashboard</h1>
-        </div>
-
-        <!-- Filters -->
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <label for="partSelect">Part Number</label>
-                <select class="form-select" id="partSelect">
-                    <option value="">Select Part</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label for="dateFilter">Date</label>
-                <input type="date" class="form-control" id="dateFilter">
-            </div>
-            <div class="col-md-4">
-                <label for="shiftSelect">Shift</label>
-                <select class="form-select" id="shiftSelect">
-                    <option value="">Select Shift</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                </select>
-            </div>
-        </div>
+        <div class="ribbon">Quality Check Dashboard</div>
 
         <!-- Grid for Cards -->
         <div class="dashboard-grid">
@@ -112,138 +156,56 @@
                 <div class="card-body">
                     <h5>OK vs NOT OK</h5>
                     <div class="chart-container">
-                        <canvas id="pieChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 3: Bar Chart for Past 5 Days -->
-            <div class="card card-custom">
-                <div class="card-body">
-                    <h5>Past 5 Days Scan Comparison</h5>
-                    <div class="chart-container">
-                        <canvas id="barChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Removed the 4th card and added the report table -->
-            <div class="card card-custom">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <div class="container">
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <input type="text" id="partFilterInput" class="form-control filter-input" placeholder="Filter by Part no....">
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="text" id="dateFilterInput" class="form-control filter-input" placeholder="Filter by Date (yyyy-mm-dd)...">
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="text" id="barcodeFilterInput" class="form-control filter-input" placeholder="Filter by Barcode...">
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="text" id="createdByFilterInput" class="form-control filter-input" placeholder="Filter by Created By...">
-                                </div>
-                            </div>
-                    
-                            <!-- Report Table -->
-                            <div class="card">
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table" id="reportTable">
-                                            <thead class="thead-dark">
-                                                <tr id="headerRow">
-                                                    <th>Part no.</th>
-                                                    <th>Barcode</th>
-                                                    <th>Created On</th>
-                                                    <th>Created By</th>
-                                                </tr>
-                                                <tr id="contentRow">
-                                                    <th colspan="4"></th>
-                                                </tr>
-                                                <tr id="methodRow">
-                                                    <th colspan="4"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Report data will be inserted here -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <!-- <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button> -->
-                                </div>
+                        <div class="pie-chart" id="pieChart"></div>
+                        <div class="legend">
+                            <div>
+                                <span style="color: #28a745;">&#9632;</span> OK: <span id="okCount">0</span>
+                                &nbsp;&nbsp;&nbsp;
+                                <span style="color: #dc3545;">&#9632;</span> NOT OK: <span id="notOkCount">0</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Full-Screen Section for Extended View -->
-        <div class="row">
-            <div class="col-12 text-center mt-4">
-                <button class="btn btn-primary" onclick="toggleFullScreen()">Extend View</button>
-                <button class="btn btn-secondary" onclick="goBack()">Return to Overview</button>
+            <!-- Card 3: Bar Chart for Past 10 Days -->
+            <div class="card card-custom" style="grid-column: span 2; height: 300px;"> <!-- Increased height -->
+                <div class="card-body">
+                    <h5>Past 10 Days Scan Comparison</h5>
+                    <div class="chart-container">
+                        <div class="bar-chart" id="barChart"></div>
+                        <div class="x-axis" id="xAxis"></div>
+                        <div class="y-axis" id="yAxis"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Chart.js Script with Static Data -->
     <script>
         // DOMContentLoaded event listener
         document.addEventListener('DOMContentLoaded', () => {
-            fetchPart();
-            document.getElementById('partSelect').addEventListener('change', fetchReportData);
-            document.getElementById('shiftSelect').addEventListener('change', fetchReportData);
-            document.getElementById('dateFilter').addEventListener('change', fetchReportData);
             fetchReportData();
         });
 
-        // Fetch part data from the backend
-        function fetchPart() {
-            window.electron.send('fetch-part', { vcode: 'partDropdown', id: '', col: '' });
-            window.electron.receive('part-fetched', (response) => {
-                if (response.success) {
-                    populatePart(response.part);
-                } else {
-                    console.error('Error fetching part:', response.error);
-                }
-            });
-        }
-
-        // Populate part dropdown with fetched data
-        function populatePart(parts) {
-            const select = document.getElementById('partSelect');
-            select.innerHTML = '<option value="">Select Part</option>'; // Clear existing options
-            parts.forEach(part => {
-                const option = document.createElement('option');
-                option.value = part.id;
-                option.text = part.part;
-                select.appendChild(option);
-            });
-        }
-
-        // Fetch report data based on selected filters
+        // Fetch report data from the backend
         function fetchReportData() {
-            const partId = document.getElementById('partSelect').value;
-            const date = document.getElementById('dateFilter').value;
-            const shift = document.getElementById('shiftSelect').value;
-
             window.electron.send('fetch-report-data', { vcode: 'report', id: '', col: '' });
             window.electron.receive('report-data-fetched', (response) => {
                 if (response.success) {
+                    const reportData = response.report;
+                    const totalScanData = reportData.find(item => item.metric === 'Total Scanned Records');
+                    const scansPerDay = reportData.filter(item => item.metric === 'Scans Per Day');
+                    const okNotOkSummary = reportData.find(item => item.metric === 'OK/Not OK Summary');
+
                     const filteredData = {
-                        total_scans_per_part: response.report[0].total_scans_per_part,
-                        total_scans_today: response.report[0].total_scans_today,
-                        total_scans_yesterday: response.report[0].total_scans_yesterday,
-                        total_scans_day_before: response.report[0].total_scans_day_before,
-                        total_all_ok: response.report[0].total_all_ok,
-                        total_not_ok: response.report[0].total_not_ok
+                        total_scans_per_part: totalScanData ? totalScanData.value : 0,
+                        scans_per_day: scansPerDay,
+                        total_all_ok: okNotOkSummary ? okNotOkSummary.total_ok : 0,
+                        total_not_ok: okNotOkSummary ? okNotOkSummary.total_not_ok : 0
                     };
                     console.log('Filtered Data:', filteredData);
                     updateDashboard(filteredData);
-                    populateTable(response.report);
                 } else {
                     console.error('Error fetching report data:', response.error);
                 }
@@ -256,169 +218,46 @@
             document.getElementById('totalScans').innerHTML = `Total: <strong>${data.total_scans_per_part}</strong>`;
 
             // Update Pie Chart
-            pieChart.data.datasets[0].data = [data.total_all_ok, data.total_not_ok];
-            pieChart.update();
+            const pieChart = document.getElementById('pieChart');
+            const total = data.total_all_ok + data.total_not_ok;
+            const okPercentage = (data.total_all_ok / total) * 100;
+            const notOkPercentage = (data.total_not_ok / total) * 100;
+            pieChart.style.background = `conic-gradient(#28a745 0% ${okPercentage}%, #dc3545 ${okPercentage}% 100%)`;
+            document.getElementById('okCount').textContent = data.total_all_ok;
+            document.getElementById('notOkCount').textContent = data.total_not_ok;
 
             // Update Bar Chart
-            barChart.data.datasets[0].data = [
-                data.total_scans_day_before,
-                data.total_scans_yesterday,
-                data.total_scans_today,
-                0, // Placeholder for Day 4
-                0  // Placeholder for Day 5
-            ];
-            barChart.update();
-        }
+            const barChart = document.getElementById('barChart');
+            const xAxis = document.getElementById('xAxis');
+            const yAxis = document.getElementById('yAxis');
+            barChart.innerHTML = '';
+            xAxis.innerHTML = '';
+            yAxis.innerHTML = '';
 
-        // Populate report table with fetched data
-        function populateTable(report) {
-            const headerRow = document.getElementById('headerRow');
-            const contentRow = document.getElementById('contentRow');
-            const methodRow = document.getElementById('methodRow');
-            const tbody = document.getElementById('reportTable').getElementsByTagName('tbody')[0];
-            tbody.innerHTML = ''; // Clear existing rows
-
-            // Clear existing header, content, and method rows
-            headerRow.innerHTML = '<th>Part ID</th><th>Barcode</th><th>Created On</th><th>Created By</th>';
-            contentRow.innerHTML = '<th colspan="4"></th>';
-            methodRow.innerHTML = '<th colspan="4"></th>';
-
-            // Extract unique control items, content, and check methods
-            const uniqueItems = {};
-            report.forEach(row => {
-                if (!uniqueItems[row.control_item]) {
-                    uniqueItems[row.control_item] = {
-                        content: row.content,
-                        check_method: row.check_method
-                    };
-                }
+            const maxScans = Math.max(...data.scans_per_day.map(dayData => dayData.total_scans));
+            const yAxisLabels = Array.from({ length: 5 }, (_, i) => Math.round((maxScans / 4) * i));
+            yAxisLabels.reverse().forEach(label => {
+                const yLabel = document.createElement('div');
+                yLabel.textContent = label;
+                yAxis.appendChild(yLabel);
             });
 
-            // Add control items, content, and check methods to the header
-            Object.keys(uniqueItems).forEach(item => {
-                headerRow.innerHTML += `<th>${item}</th>`;
-                contentRow.innerHTML += `<th>${uniqueItems[item].content}</th>`;
-                methodRow.innerHTML += `<th>${uniqueItems[item].check_method}</th>`;
+            data.scans_per_day.forEach(dayData => {
+                const bar = document.createElement('div');
+                bar.classList.add('bar');
+                bar.style.height = `${(dayData.total_scans / maxScans) * 100}%`;
+                const barLabel = document.createElement('div');
+                barLabel.classList.add('bar-label');
+                barLabel.textContent = dayData.total_scans;
+                bar.appendChild(barLabel);
+                barChart.appendChild(bar);
+
+                const xLabel = document.createElement('div');
+                xLabel.textContent = dayData.date;
+                xAxis.appendChild(xLabel);
             });
-
-            // Populate table rows
-            report.forEach(row => {
-                const tr = document.createElement('tr');
-                const statusArray = row.status.split(', ');
-
-                tr.innerHTML = `
-                    <td>${row.part_id}</td>
-                    <td>${row.barcode}</td>
-                    <td>${new Date(row.created_on).toLocaleString()}</td>
-                    <td>${row.created_by}</td>
-                `;
-                Object.keys(uniqueItems).forEach(item => {
-                    const statusIndex = Object.keys(uniqueItems).indexOf(item);
-                    tr.innerHTML += `<td>${statusArray[statusIndex] || ''}</td>`;
-                });
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Filter table based on input values
-        function filterTable() {
-            const partFilter = document.getElementById('partFilterInput').value.toUpperCase();
-            const dateFilter = document.getElementById('dateFilterInput').value;
-            const barcodeFilter = document.getElementById('barcodeFilterInput').value.toUpperCase();
-            const createdByFilter = document.getElementById('createdByFilterInput').value.toUpperCase();
-            const table = document.getElementById('reportTable');
-            const tr = table.getElementsByTagName('tr');
-
-            for (let i = 3; i < tr.length; i++) { // Start from 3 to skip header rows
-                const partId = tr[i].getElementsByTagName('td')[0].textContent.toUpperCase();
-                const barcode = tr[i].getElementsByTagName('td')[1].textContent.toUpperCase();
-                const createdOn = new Date(tr[i].getElementsByTagName('td')[2].textContent).toISOString().split('T')[0];
-                const createdBy = tr[i].getElementsByTagName('td')[3].textContent.toUpperCase();
-
-                if (
-                    partId.indexOf(partFilter) > -1 &&
-                    barcode.indexOf(barcodeFilter) > -1 &&
-                    createdBy.indexOf(createdByFilter) > -1 &&
-                    (dateFilter === '' || createdOn === dateFilter)
-                ) {
-                    tr[i].style.display = '';
-                } else {
-                    tr[i].style.display = 'none';
-                }
-            }
-        }
-
-        // Export filtered table data to Excel
-        function exportToExcel() {
-            const table = document.getElementById('reportTable');
-            const filteredRows = Array.from(table.getElementsByTagName('tr')).filter(row => row.style.display !== 'none');
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.table_to_sheet(table, { raw: true });
-
-            // Create a new worksheet with only the filtered rows
-            const filteredData = [];
-            filteredRows.forEach(row => {
-                const rowData = [];
-                Array.from(row.getElementsByTagName('td')).forEach(cell => {
-                    rowData.push(cell.textContent);
-                });
-                filteredData.push(rowData);
-            });
-
-            // Add the filtered data to the worksheet
-            XLSX.utils.sheet_add_aoa(ws, filteredData, { origin: "A2" });
-
-            // Add the worksheet to the workbook
-            XLSX.utils.book_append_sheet(wb, ws, "Filtered Report");
-
-            // Write the workbook to a file
-            XLSX.writeFile(wb, 'filtered_report.xlsx');
-        }
-
-        // Pie Chart: OK vs NOT OK
-        const pieCtx = document.getElementById('pieChart').getContext('2d');
-        const pieChart = new Chart(pieCtx, {
-            type: 'pie',
-            data: {
-                labels: ['OK', 'NOT OK'],
-                datasets: [{
-                    data: [0, 0], // Initial data
-                    backgroundColor: ['#28a745', '#dc3545']
-                }]
-            }
-        });
-
-        // Bar Chart: Past 5 Days
-        const barCtx = document.getElementById('barChart').getContext('2d');
-        const barChart = new Chart(barCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
-                datasets: [{
-                    label: 'Scans',
-                    data: [0, 0, 0, 0, 0], // Initial data
-                    backgroundColor: '#007bff'
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Extend View Functionality
-        function toggleFullScreen() {
-            document.querySelector('.container').classList.add('container-fluid');
-            document.querySelector('.container').classList.remove('container');
-        }
-
-        // Go Back to Normal View
-        function goBack() {
-            document.querySelector('.container-fluid').classList.add('container');
-            document.querySelector('.container-fluid').classList.remove('container-fluid');
         }
     </script>
 </body>
+
+</html>

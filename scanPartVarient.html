@@ -911,6 +911,7 @@
 
 
         function saveScans() {
+            exportToExcel();
             const partId = document.getElementById('partSelect').value;
             const scanData = { part_id: partId, scans: [] };
             const scannedPartsTableBody = document.getElementById('scannedPartsTableBody');
@@ -942,6 +943,7 @@
             window.electron.receive('scan-data-saved', (response) => {
                 if (response.success) {
                     showSaveToast();
+                  
                     setTimeout(() => {
                         clearLocalStorageForPart(partId);
                         resetForm();
@@ -973,7 +975,7 @@
             const checkingMethods = [];
             const barcodeData = [];
             const remarksData = [];
-            const statusData = []; // Array to hold status
+            const statusData = []; 
 
             // Read Control Items row
             const controlItemsRow = document.querySelector('#controlItemsRow');
